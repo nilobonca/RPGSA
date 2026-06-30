@@ -25,6 +25,8 @@ interface CanvasUIState {
   bringToFront: (menuId: string) => void;
   masterVolume: number;
   setMasterVolume: (volume: number) => void;
+  isTheaterMode: boolean;
+  setIsTheaterMode: (val: boolean) => void;
 }
 
 interface CanvasSelectionState {
@@ -108,6 +110,9 @@ export const useCanvasGlobalStore = create<CanvasGlobalStore>((set) => ({
 
   masterVolume: 1.0,
   setMasterVolume: (volume) => set({ masterVolume: volume }),
+
+  isTheaterMode: false,
+  setIsTheaterMode: (val) => set({ isTheaterMode: val }),
 
   // Selection Initial States
   activeAreaIds: new Set(),

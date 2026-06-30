@@ -25,6 +25,11 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
 
     const { is3DEnabled } = useCanvasGlobalStore();
     const [isAdding, setIsAdding] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    
+    useEffect(() => {
+        setMounted(true);
+    }, []);
     
     const dragControls = useDragControls();
     const menuRef = useRef<HTMLDivElement>(null);
@@ -68,6 +73,8 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
         setIsAdding(false);
     };
 
+    if (!mounted) return null;
+
     return (
         <motion.div
             ref={menuRef}
@@ -90,7 +97,7 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
             dragElastic={0}
             onDragEnd={onDragEnd}
             dragConstraints={constraintRef}
-            className={`absolute flex flex-col bg-white dark:bg-neutral-900 dark:border dark:border-neutral-800 rounded-sm drop-shadow-xl overflow-hidden pointer-events-auto p-5`}
+            className={`absolute flex flex-col bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-gray-200/50 dark:border-white/10 rounded-sm drop-shadow-xl overflow-hidden pointer-events-auto p-5 animate-in fade-in zoom-in-95 duration-200`}
             onContextMenu={(e) => e.preventDefault()}
             onPointerDownCapture={onInteraction}
         >

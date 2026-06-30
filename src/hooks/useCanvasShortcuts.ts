@@ -21,6 +21,7 @@ interface UseCanvasShortcutsProps {
   addToHistory: (description?: string) => void;
   handleUndo: () => void;
   handleRedo: () => void;
+  toggleDiceTray?: () => void;
 }
 
 export const useCanvasShortcuts = ({
@@ -42,10 +43,23 @@ export const useCanvasShortcuts = ({
   deleteWallPersisted,
   addToHistory,
   handleUndo,
-  handleRedo
+  handleRedo,
+  toggleDiceTray
 }: UseCanvasShortcutsProps) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Avoid triggering shortcuts when typing in inputs
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      // Toggle Dice Tray
+      if ((e.key === 'd' || e.key === 'D') && toggleDiceTray) {
+        e.preventDefault();
+        toggleDiceTray();
+      }
+
       // Delete Selection
       if (e.key === 'Delete') {
         if (selectedItemIds.size > 0) {
@@ -86,5 +100,5 @@ export const useCanvasShortcuts = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemIds, activePlayers, activeImages, activeAreas, activePins, activeNotes, activeSoundboardItems, activeWalls, deletePlayer, deleteImagePersisted, deleteArea, deletePinPersisted, deleteNotePersisted, deleteSoundboardItemPersisted, deleteWallPersisted, addToHistory, handleUndo, handleRedo]);
+  }, [selectedItemIds, activePlayers, activeImages, activeAreas, activePins, activeNotes, activeSoundboardItems, activeWalls, deletePlayer, deleteImagePersisted, deleteArea, deletePinPersisted, deleteNotePersisted, deleteSoundboardItemPersisted, deleteWallPersisted, addToHistory, handleUndo, handleRedo, toggleDiceTray]);
 };

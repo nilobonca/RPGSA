@@ -255,5 +255,15 @@ export const executeImport = async (
 
   await saveAllItems('persistedCanvas', finalCanvasItems);
 
+  // 5. Restore Chat History
+  const importedChatHistory = dataJson.chatHistory || {};
+  for (const [key, historyArray] of Object.entries(importedChatHistory)) {
+    const oldId = key.replace('chat_history_', '');
+    if (projectIdMap.has(oldId)) {
+      const newId = projectIdMap.get(oldId);
+      localStorage.setItem(`chat_history_${newId}`, JSON.stringify(historyArray));
+    }
+  }
+
   if (onProgress) onProgress(100);
 };

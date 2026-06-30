@@ -82,6 +82,20 @@ export const exportAllProjects = async (onProgress?: (progress: number) => void)
     // Remove URLs from other objects just in case to keep JSON clean
     // The URLs are blob URLs anyway, which are useless when exported
     
+    // Export Chat History from LocalStorage
+    const chatHistory: Record<string, any> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('chat_history_')) {
+        try {
+          chatHistory[key] = JSON.parse(localStorage.getItem(key) || '[]');
+        } catch (e) {
+          console.error(`Failed to parse chat history for ${key}`);
+        }
+      }
+    }
+    exportData.chatHistory = chatHistory;
+
     zip.file("data.json", JSON.stringify(exportData, null, 2));
 
     if (onProgress) onProgress(50); // DB extraction done, zipping begins
@@ -186,12 +200,23 @@ export const exportSpecificPages = async (projectId: string, pageIds: string[], 
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const exportData: Record<string, any[]> = {
+    const exportData: Record<string, any> = {
       persistedCanvas: finalCanvasData,
       soundboard: [], // Optional: Should soundboard be included? Let's leave empty for page exports unless requested
       polls: [],
-      poll_responses: []
+      poll_responses: [],
+      chatHistory: {}
     };
+
+    // Grab specific chat history
+    try {
+      const chatData = localStorage.getItem(`chat_history_${projectId}`);
+      if (chatData) {
+        exportData.chatHistory[`chat_history_${projectId}`] = JSON.parse(chatData);
+      }
+    } catch (e) {
+      console.error('Failed to parse specific chat history');
+    }
 
     const audioFolder = zip.folder("media/audios");
     const imageFolder = zip.folder("media/images");

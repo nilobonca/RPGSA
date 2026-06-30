@@ -511,7 +511,7 @@ const CanvasContainer = React.forwardRef<{ centerOn: (x: number, y: number) => v
 
           {/* Minimap - Hidden on mobile */}
           <div
-            className={clsx("minimap-container hidden md:block absolute bottom-16 right-6 border shadow-2xl rounded-lg overflow-hidden z-50 select-none no-drag group transition-colors duration-500", isEthereal ? "bg-black/40 backdrop-blur-md border-white/10" : "bg-neutral-900 border-neutral-700")}
+            className={clsx("minimap-container hidden md:block absolute bottom-16 right-6 border shadow-2xl rounded-lg overflow-hidden z-50 select-none no-drag group transition-colors duration-500 animate-in fade-in zoom-in-95", isEthereal ? "bg-black/40 backdrop-blur-md border-white/10" : "bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border-gray-200/50 dark:border-white/10")}
             style={{ width: MINIMAP_SIZE, height: MINIMAP_SIZE }}
           >
             <div className="relative w-full h-full bg-neutral-800/50">

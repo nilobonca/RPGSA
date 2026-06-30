@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { getSharedAudioContext, resumeAudioContext } from '@/utils/audio/audioContext';
-import { Volume2, Wifi, Users, Activity, LogOut } from 'lucide-react';
+import { Activity, Play, Volume2, LogOut, Wifi, MessageSquare, Dices, Users } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
+import { ChatMessage } from '@/interfaces/chat';
+import { SessionChat } from '@/components/Chat/SessionChat';
+import { DiceTray } from '@/components/Dice/DiceTray';
 import Head from 'next/head';
 
 export default function ListenerSession() {
@@ -16,6 +20,13 @@ export default function ListenerSession() {
     const [showSpectrogram, setShowSpectrogram] = useState(true);
     const [activeCount, setActiveCount] = useState(0);
 
+    // Chat State
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+    const [chatClearedAt, setChatClearedAt] = useState<number | null>(null);
+    const [isDiceTrayOpen, setIsDiceTrayOpen] = useState(false);
+    const [chatSoundEnabled, setChatSoundEnabled] = useState(true);
+    const chatSoundEnabledRef = useRef(true);
+
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const streamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -26,6 +37,46 @@ export default function ListenerSession() {
     const peerRef = useRef<any>(null);
     const currentCallRef = useRef<any>(null);
     const audioElRef = useRef<HTMLAudioElement | null>(null);
+
+    const playPing = () => {
+        if (chatSoundEnabledRef.current) {
+            try {
+                const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.05);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.3);
+            } catch (e) {
+                console.error("Failed to play ping", e);
+            }
+        }
+    };
+
+    const handleSendMessage = useCallback((text: string, isRoll?: boolean) => {
+        if (!channelRef.current) return;
+
+        const msg: ChatMessage = {
+            id: uuidv4(),
+            senderId: listenerId,
+            senderName: username,
+            text,
+            timestamp: Date.now(),
+            isRoll
+        };
+
+        // Send to host
+        channelRef.current.send({ type: 'chat', payload: msg });
+
+        // Add to local UI
+        setChatMessages(prev => [...prev, msg]);
+    }, [listenerId, username]);
 
     // Generate a unique listenerId on mount
     useEffect(() => {
@@ -156,6 +207,9 @@ export default function ListenerSession() {
                             handleLeave();
                         } else if (data.type === 'status_update') {
                             setActiveCount(data.payload.activeCount ?? 0);
+                        } else if (data.type === 'chat') {
+                            setChatMessages(prev => [...prev, data.payload]);
+                            playPing();
                         }
                     });
 
@@ -351,6 +405,20 @@ export default function ListenerSession() {
                                 <span className="text-neutral-300 font-mono">{activeCount} canais</span>
                             </div>
 
+                            {/* Dice Button */}
+                            <button
+                                onClick={() => setIsDiceTrayOpen(!isDiceTrayOpen)}
+                                className={`flex items-center gap-1.5 border px-3 py-1 text-xs rounded-full transition-colors cursor-pointer ${
+                                    isDiceTrayOpen 
+                                        ? 'bg-indigo-600 border-indigo-500 text-white'
+                                        : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:bg-neutral-800'
+                                }`}
+                                title="Rolar Dados"
+                            >
+                                <Dices size={12} />
+                                Dados
+                            </button>
+
                             {/* Disconnect Button */}
                             <button
                                 onClick={handleLeave}
@@ -361,6 +429,20 @@ export default function ListenerSession() {
                             </button>
                         </div>
                     </div>
+                    
+                    {/* Floating Dice Tray */}
+                    {isDiceTrayOpen && (
+                        <div className="absolute top-20 right-4 z-[60]">
+                            <DiceTray 
+                                onClose={() => setIsDiceTrayOpen(false)}
+                                onRoll={(text, isPrivate) => {
+                                    if (!isPrivate) {
+                                        handleSendMessage(text, true);
+                                    }
+                                }}
+                            />
+                        </div>
+                    )}
 
                     {/* Immersive Center Content */}
                     <div className="flex-1 flex flex-col justify-center items-center py-8">
@@ -397,6 +479,13 @@ export default function ListenerSession() {
                                         height={180}
                                         className="w-full h-full block bg-black"
                                     />
+                                    {activeCount > 0 && showSpectrogram && (
+                                        <div className="absolute top-2 left-2 flex gap-1">
+                                            <div className="w-1 h-3 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                            <div className="w-1 h-3 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                            <div className="w-1 h-3 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                        </div>
+                                    )}
                                     {activeCount === 0 && (
                                         <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-[11px] text-neutral-600 font-mono uppercase tracking-widest">
                                             Silêncio no Canvas
@@ -408,6 +497,23 @@ export default function ListenerSession() {
                                     Visualizador desativado para economia de recursos.
                                 </div>
                             )}
+                        </div>
+
+                        {/* Chat Section */}
+                        <div className="w-full mt-6 h-[400px]">
+                            <SessionChat
+                                messages={chatMessages.filter(m => !chatClearedAt || m.timestamp > chatClearedAt)}
+                                currentUserId={username}
+                                onSendMessage={handleSendMessage}
+                                onClear={() => setChatClearedAt(Date.now())}
+                                soundEnabled={chatSoundEnabled}
+                                onToggleSound={() => {
+                                    const nextState = !chatSoundEnabled;
+                                    setChatSoundEnabled(nextState);
+                                    chatSoundEnabledRef.current = nextState;
+                                }}
+                                className="h-full"
+                            />
                         </div>
                     </div>
 

@@ -204,7 +204,7 @@ const HeaderCab: React.FC<HeaderProps> = ({
       dragControls={dragControls}
       dragMomentum={false}
       onDragEnd={onDragEnd}
-      className={`absolute flex flex-col bg-white dark:bg-neutral-900 dark:border dark:border-neutral-800 rounded-sm drop-shadow-xl overflow-hidden pointer-events-auto p-5`}
+      className={`absolute flex flex-col bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-gray-200/50 dark:border-white/10 rounded-sm drop-shadow-xl overflow-hidden pointer-events-auto p-5 animate-in fade-in zoom-in-95 duration-200`}
       onPointerDownCapture={onInteraction}
     >
       {/* Expanded View */}

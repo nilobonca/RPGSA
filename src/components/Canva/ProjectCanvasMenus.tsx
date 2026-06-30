@@ -163,7 +163,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
         "hidden md:flex fixed top-4 left-4 z-50 items-center gap-2 px-3 py-2 shadow-md border",
         isEthereal 
           ? "bg-black/40 backdrop-blur-xl border-white/10 rounded-[1.5rem]" 
-          : "bg-white/90 dark:bg-neutral-900/90 rounded border-gray-200 dark:border-neutral-700 backdrop-blur-sm"
+          : "bg-white/60 dark:bg-neutral-900/60 rounded border-gray-200/50 dark:border-white/10 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200"
       )}>
         <button onClick={() => router.push('/')} className={clsx("p-1 transition-colors", isEthereal ? "text-neutral-400 hover:text-white hover:bg-white/10 rounded-full" : "hover:bg-gray-100 dark:hover:bg-neutral-800 rounded text-gray-600 dark:text-neutral-400")} title="Voltar para Dashboard">
           <ArrowLeft size={18} />

@@ -9,6 +9,7 @@ import { ActiveArea, Audios } from '@/interfaces/utils/indexedDB';
 import AudioPlayerList from '@/components/player-list';
 import { useCanvasSelection } from '@/hooks/useCanvasSelection';
 import { handleDeepSelectCycle } from '@/utils/deep-select';
+import { useThemeStore } from '@/store/themeStore';
 
 interface EditableAreaProps {
     area: ActiveArea;
@@ -485,7 +486,6 @@ export default function EditableArea({ area, onUpdate, isSelected, onSelect, onR
                         className={cn(
                             "draggable-item",
                             "no-drag",
-                            // Remove default fill/stroke classes when custom color is present, efficiently handled inline style below for fill
                             "stroke-2",
                             "hover:opacity-80 pointer-events-auto",
                             ghostPoint ? "cursor-none" : isResizing ? "cursor-nwse-resize" : "cursor-move"
@@ -493,17 +493,78 @@ export default function EditableArea({ area, onUpdate, isSelected, onSelect, onR
                         style={{
                             fill: area.color ? area.color : (isActive || isSelected ? '#22c55e' : '#3b82f6'),
                             fillOpacity: area.volumeMode === 'proximity' ? 0.05 : (area.opacity !== undefined ? area.opacity : (isActive || isSelected ? 0.2 : 0.1)),
-                            // Improved selection stroke logic using helper
                             stroke: isSelected
                                 ? '#ffffff'
-                                : (area.color ? area.color : '#3b82f6'), // Not selected
+                                : (area.color ? area.color : '#3b82f6'),
                             strokeOpacity: 1,
-                            strokeWidth: isSelected ? 3 : 2
+                            strokeWidth: isSelected ? 3 : 2,
                         }}
                         id={`area-${area.id}`}
                         {...bindPoly()}
                         onContextMenu={handleContextMenu}
                     />
+
+                    {/* Sound wave ripple animation when area is active */}
+                    {isActive && useThemeStore.getState().areaRippleEnabled && (() => {
+                        const cx = centroid.x;
+                        const cy = centroid.y;
+                        // Calculate max radius from centroid to farthest polygon vertex
+                        const maxR = Math.max(...points.map(p => Math.hypot(p.x - cx, p.y - cy))) * 1.1;
+                        const clipId = `area-clip-${area.id}`;
+                        const rippleColor = area.color || '#818cf8';
+                        return (
+                            <>
+                                <defs>
+                                    <clipPath id={clipId}>
+                                        <polygon points={pointsString} />
+                                    </clipPath>
+                                </defs>
+                                <g clipPath={`url(#${clipId})`}>
+                                    {[0, 1, 2].map(i => (
+                                        <circle
+                                            key={i}
+                                            cx={cx}
+                                            cy={cy}
+                                            r={0}
+                                            fill="none"
+                                            stroke={rippleColor}
+                                            strokeWidth={2 / transform.k}
+                                            opacity={0}
+                                            style={{
+                                                animation: `areaRipple 3s ease-out ${i * 1}s infinite`,
+                                                // CSS vars for the animation
+                                                ['--ripple-max-r' as any]: `${maxR}px`,
+                                            }}
+                                        >
+                                            <animate
+                                                attributeName="r"
+                                                from="0"
+                                                to={String(maxR)}
+                                                dur="3s"
+                                                begin={`${i * 1}s`}
+                                                repeatCount="indefinite"
+                                            />
+                                            <animate
+                                                attributeName="opacity"
+                                                values="0.6;0.3;0"
+                                                dur="3s"
+                                                begin={`${i * 1}s`}
+                                                repeatCount="indefinite"
+                                            />
+                                            <animate
+                                                attributeName="stroke-width"
+                                                from={String(3 / transform.k)}
+                                                to={String(1 / transform.k)}
+                                                dur="3s"
+                                                begin={`${i * 1}s`}
+                                                repeatCount="indefinite"
+                                            />
+                                        </circle>
+                                    ))}
+                                </g>
+                            </>
+                        );
+                    })()}
 
                     {ghostPoint && (
                         <circle

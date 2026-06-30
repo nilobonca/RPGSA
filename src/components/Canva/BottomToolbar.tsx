@@ -69,7 +69,7 @@ export default function BottomToolbar({ onDragStart, tool, setTool }: BottomTool
             {showPinMenu && (
                 <div
                     ref={pinMenuRef}
-                    className="absolute bottom-16 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-gray-200 dark:border-neutral-700 p-2 flex gap-2 mb-2 animate-in fade-in slide-in-from-bottom-2"
+                    className="absolute bottom-16 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md rounded-lg shadow-xl border border-gray-200/50 dark:border-white/10 p-2 flex gap-2 mb-2 animate-in fade-in zoom-in-95 duration-200"
                 >
                     <div
                         draggable
@@ -126,7 +126,7 @@ export default function BottomToolbar({ onDragStart, tool, setTool }: BottomTool
             {showShapeMenu && (
                 <div
                     ref={shapeMenuRef}
-                    className="absolute bottom-16 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-gray-200 dark:border-neutral-700 p-2 flex gap-2 mb-2 animate-in fade-in slide-in-from-bottom-2"
+                    className="absolute bottom-16 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md rounded-lg shadow-xl border border-gray-200/50 dark:border-white/10 p-2 flex gap-2 mb-2 animate-in fade-in zoom-in-95 duration-200"
                 >
                     <div
                         draggable
@@ -210,7 +210,7 @@ export default function BottomToolbar({ onDragStart, tool, setTool }: BottomTool
 
             {/* Main Toolbar */}
             <div className={cn(
-                "bg-white dark:bg-neutral-800 rounded-full shadow-2xl border border-gray-200 dark:border-neutral-700 transition-all duration-300 overflow-hidden",
+                "bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md rounded-full shadow-2xl border border-gray-200/50 dark:border-white/10 transition-all duration-300 overflow-hidden animate-in fade-in zoom-in-95 duration-200",
                 isOpen ? "px-4 py-2" : "px-2 py-2"
             )}>
                 {isOpen ? (

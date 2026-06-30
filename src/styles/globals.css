@@ -236,3 +236,13 @@ body {
 .ethereal.bg-neutral-950 {
   background-color: #050505 !important;
 }
+
+/* Forçar o Canvas do DiceBox a cobrir toda a tela */
+#dice-box-canvas, .dice-box-canvas {
+  width: 100vw !important;
+  height: 100vh !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  pointer-events: none !important;
+}

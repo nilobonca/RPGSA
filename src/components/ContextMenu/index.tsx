@@ -105,7 +105,7 @@ export default function ContextMenu({ x, y, onClose, options }: ContextMenuProps
     return ReactDOM.createPortal(
         <div
             ref={menuRef}
-            className="fixed bg-white dark:bg-neutral-800 shadow-2xl rounded-lg border border-gray-200 dark:border-neutral-700 py-1 min-w-[180px] md:min-w-[200px] z-[9999]"
+            className="fixed bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] rounded-xl border border-white/40 dark:border-white/10 py-1.5 min-w-[200px] z-[9999] animate-in fade-in zoom-in-95 duration-100"
             style={{
                 left: `${position.x}px`,
                 top: `${position.y}px`,
@@ -131,16 +131,16 @@ export default function ContextMenu({ x, y, onClose, options }: ContextMenuProps
                                 option.onClick();
                                 onClose();
                             }}
-                            className={`w-full text-left px-4 py-3 md:py-2 transition-colors flex items-center justify-between text-sm md:text-base touch-manipulation
+                            className={`w-full text-left px-3 py-2.5 mx-1 transition-all duration-200 flex items-center justify-between text-sm rounded-lg touch-manipulation relative group
                         ${option.disabled
-                                    ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-neutral-900'
-                                    : 'hover:bg-blue-50 dark:hover:bg-neutral-700 active:bg-blue-100 dark:active:bg-neutral-600 text-gray-700 dark:text-neutral-200'
+                                    ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-500'
+                                    : 'hover:bg-black/5 dark:hover:bg-white/10 active:scale-[0.98] text-gray-700 dark:text-neutral-200 hover:text-gray-900 dark:hover:text-white'
                                 }`}
-                            style={{ minHeight: '44px' }}
+                            style={{ width: 'calc(100% - 8px)' }}
                         >
-                            <div className="flex items-center gap-3">
-                                {option.icon && <span className="text-lg md:text-base flex items-center justify-center">{option.icon}</span>}
-                                <span className="font-medium">{option.label}</span>
+                            <div className="flex items-center gap-3 relative z-10">
+                                {option.icon && <span className="text-lg md:text-base flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-white transition-colors">{option.icon}</span>}
+                                <span className="font-medium tracking-wide">{option.label}</span>
                             </div>
                             {option.subMenu && <ChevronRight size={16} />}
                         </button>
@@ -149,19 +149,19 @@ export default function ContextMenu({ x, y, onClose, options }: ContextMenuProps
                     {/* Submenu */}
                     {option.subMenu && activeSubMenuIndex === index && (
                         <div
-                            className={`absolute top-0 ${openSubMenuToLeft ? 'right-full mr-1' : 'left-full ml-1'} bg-white dark:bg-neutral-800 shadow-2xl rounded-lg border border-gray-200 dark:border-neutral-700 py-1 min-w-[180px] md:min-w-[200px] max-h-[300px] overflow-y-auto flex flex-col`}
+                            className={`absolute top-0 ${openSubMenuToLeft ? 'right-full mr-2' : 'left-full ml-2'} bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] rounded-xl border border-white/40 dark:border-white/10 py-1.5 min-w-[200px] max-h-[300px] overflow-y-auto flex flex-col animate-in fade-in zoom-in-95 duration-150`}
                         >
                             {option.searchable && (
-                                <div className="p-2 sticky top-0 bg-white dark:bg-neutral-800 z-10 border-b border-gray-100 dark:border-neutral-700">
+                                <div className="p-2 sticky top-0 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md z-10 border-b border-gray-200/50 dark:border-white/10">
                                     <div className="relative">
-                                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                                         <input
                                             type="text"
                                             placeholder="Buscar..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             onClick={(e) => e.stopPropagation()}
-                                            className="w-full pl-7 pr-2 py-1 text-xs bg-gray-100 dark:bg-neutral-900 rounded border-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-gray-100"
+                                            className="w-full pl-8 pr-3 py-1.5 text-sm bg-black/5 dark:bg-white/5 rounded-md border border-transparent focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 text-gray-900 dark:text-gray-100 transition-all outline-none"
                                             autoFocus
                                         />
                                     </div>
@@ -188,15 +188,15 @@ export default function ContextMenu({ x, y, onClose, options }: ContextMenuProps
                                                     subOption.onClick();
                                                     onClose();
                                                 }}
-                                                className={`w-full text-left px-4 py-3 md:py-2 transition-colors flex items-center gap-3 text-sm md:text-base touch-manipulation shrink-0
+                                                className={`w-full text-left px-3 py-2.5 mx-1 transition-all duration-200 flex items-center gap-3 text-sm rounded-lg touch-manipulation shrink-0 relative group
                                             ${subOption.disabled
-                                                        ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-neutral-900'
-                                                        : 'hover:bg-blue-50 dark:hover:bg-neutral-700 active:bg-blue-100 dark:active:bg-neutral-600 text-gray-700 dark:text-neutral-200'
+                                                        ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-500'
+                                                        : 'hover:bg-black/5 dark:hover:bg-white/10 active:scale-[0.98] text-gray-700 dark:text-neutral-200 hover:text-gray-900 dark:hover:text-white'
                                                     }`}
-                                                style={{ minHeight: '44px' }}
+                                                style={{ width: 'calc(100% - 8px)' }}
                                             >
-                                                {subOption.icon && <span className="text-lg md:text-base flex items-center justify-center">{subOption.icon}</span>}
-                                                <span className="font-medium truncate">{subOption.label}</span>
+                                                {subOption.icon && <span className="text-lg md:text-base flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-white transition-colors">{subOption.icon}</span>}
+                                                <span className="font-medium tracking-wide truncate relative z-10">{subOption.label}</span>
                                             </button>
                                         )}
                                     </div>

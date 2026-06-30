@@ -8,6 +8,7 @@ import { useCanvasHistory } from '@/hooks/useCanvasHistory';
 import { useCanvasSelection } from '@/hooks/useCanvasSelection';
 import { useCanvasUI } from '@/hooks/useCanvasUI';
 import { useProjectState } from '@/hooks/useProjectState';
+import { useCanvasGlobalStore } from '@/store/canvasStore';
 import { useCanvasShortcuts } from '@/hooks/useCanvasShortcuts';
 import { useAudioInteractions } from '@/hooks/useAudioInteractions';
 import { isPointInPolygon, getPolygonCentroid } from '@/hooks/useCanvasMath';
@@ -48,6 +49,10 @@ import { createContext, useContext } from "react";
 import ListenersMenu from '@/components/ListenersMenu';
 import { setPlaySoundboardCallback, setStopSoundboardCallback } from "@/components/Soundboard/activeAudios";
 import { v4 as uuidv4 } from 'uuid';
+import { ChatMessage } from '@/interfaces/chat';
+import { SessionChat } from '@/components/Chat/SessionChat';
+import { DiceTray } from '@/components/Dice/DiceTray';
+import { MessageSquare } from 'lucide-react';
 
 
 
@@ -57,6 +62,24 @@ export default function ProjectCanvas() {
   const router = useRouter();
   const { id: projectId } = router.query;
 
+  const isTheaterMode = useCanvasGlobalStore(state => state.isTheaterMode);
+  const setIsTheaterMode = useCanvasGlobalStore(state => state.setIsTheaterMode);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F10') {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+          return;
+        }
+        e.preventDefault();
+        setIsTheaterMode(!isTheaterMode);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isTheaterMode, setIsTheaterMode]);
+
   const { theme } = useThemeStore();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -64,9 +87,93 @@ export default function ProjectCanvas() {
   }, []);
   const isEthereal = mounted && theme === 'ethereal';
 
+  // Chat State
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [chatClearedAt, setChatClearedAt] = useState<number | null>(null);
+  const isChatOpenRef = useRef(false);
+  
+  const [isDiceTrayOpen, setIsDiceTrayOpen] = useState(false);
 
+  const toggleChat = useCallback((open: boolean) => {
+    setIsChatOpen(open);
+    isChatOpenRef.current = open;
+    if (open) setHasUnreadMessages(false);
+  }, []);
 
-  const {
+  const [saveChatHistory, setSaveChatHistory] = useState(false);
+  const saveChatHistoryRef = useRef(false);
+  const [chatSoundEnabled, setChatSoundEnabled] = useState(true);
+  const chatSoundEnabledRef = useRef(true);
+
+  const playPing = useCallback(() => {
+    if (chatSoundEnabledRef.current) {
+        try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.05);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.3);
+        } catch (e) {
+            console.error("Failed to play ping", e);
+        }
+    }
+  }, []);
+
+  const handleHostSendMessage = useCallback((text: string, isRoll?: boolean) => {
+    const msg: ChatMessage = {
+      id: uuidv4(),
+      senderId: 'host',
+      senderName: 'Narrador',
+      text,
+      timestamp: Date.now(),
+      isRoll
+    };
+    
+    setChatMessages(prev => {
+        const next = [...prev, msg];
+        if (saveChatHistoryRef.current && projectId) {
+            localStorage.setItem(`chat_history_${projectId}`, JSON.stringify(next));
+        }
+        return next;
+    });
+
+    Object.values(connectionsRef.current).forEach((conn: any) => {
+      conn.send({ type: 'chat', payload: msg });
+    });
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) {
+      const saved = localStorage.getItem(`chat_history_${projectId}`);
+      if (saved) {
+        try {
+            setChatMessages(JSON.parse(saved));
+            setSaveChatHistory(true);
+            saveChatHistoryRef.current = true;
+        } catch(e) {}
+      }
+    }
+  }, [projectId]);
+
+  const handleToggleSaveChat = useCallback(() => {
+    const nextVal = !saveChatHistory;
+    setSaveChatHistory(nextVal);
+    saveChatHistoryRef.current = nextVal;
+    if (!nextVal && projectId) {
+        localStorage.removeItem(`chat_history_${projectId}`);
+    } else if (nextVal && projectId) {
+        localStorage.setItem(`chat_history_${projectId}`, JSON.stringify(chatMessages));
+    }
+  }, [saveChatHistory, projectId, chatMessages]);  const {
     deleteAudio,
     resetCanvas, // Added resetCanvas
     isLoading,
@@ -247,7 +354,8 @@ export default function ProjectCanvas() {
     selectedItemIds, setSelectedItemIds,
     activePlayers, activeImages, activeAreas, activePins, activeNotes, activeSoundboardItems, activeWalls,
     deletePlayer, deleteImagePersisted, deleteArea, deletePinPersisted, deleteNotePersisted, deleteSoundboardItemPersisted, deleteWallPersisted,
-    addToHistory, handleUndo, handleRedo
+    addToHistory, handleUndo, handleRedo,
+    toggleDiceTray: () => setIsDiceTrayOpen(prev => !prev)
   });
 
   const createSoundboardButton = (position: { x: number; y: number }) => {
@@ -931,6 +1039,26 @@ export default function ProjectCanvas() {
                   [listenerId]: rtt
                 }));
               }
+            } else if (data.type === 'chat') {
+                const msg: ChatMessage = data.payload;
+                setChatMessages(prev => {
+                    const next = [...prev, msg];
+                    if (saveChatHistoryRef.current && projectId) {
+                        localStorage.setItem(`chat_history_${projectId}`, JSON.stringify(next));
+                    }
+                    return next;
+                });
+                
+                Object.values(connectionsRef.current).forEach((otherConn: any) => {
+                    if (otherConn.peer !== listenerId) {
+                        otherConn.send({ type: 'chat', payload: msg });
+                    }
+                });
+                
+                if (!isChatOpenRef.current) {
+                    setHasUnreadMessages(true);
+                }
+                playPing();
             }
           });
 
@@ -1478,6 +1606,44 @@ return (
       {/* Global Audio Player engine */}
       <GlobalAudioPlayer activeGlobalTracks={activeGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId)} />
 
+      {/* Chat Drawer */}
+      {isChatOpen && (
+        <div className={clsx("absolute top-20 right-4 w-80 h-[500px] z-50 flex flex-col shadow-2xl rounded-xl border border-neutral-700 bg-neutral-900 animate-in slide-in-from-top-2 fade-in transition-opacity duration-500", isTheaterMode ? "opacity-0 pointer-events-none" : "opacity-100")}>
+          <SessionChat
+            messages={chatMessages.filter(m => !chatClearedAt || m.timestamp > chatClearedAt)}
+            currentUserId="host"
+            onSendMessage={handleHostSendMessage}
+            onClose={() => toggleChat(false)}
+            onClear={() => setChatClearedAt(Date.now())}
+            isHost={true}
+            saveChatEnabled={saveChatHistory}
+            onToggleSaveChat={handleToggleSaveChat}
+            soundEnabled={chatSoundEnabled}
+            onToggleSound={() => {
+                const nextState = !chatSoundEnabled;
+                setChatSoundEnabled(nextState);
+                chatSoundEnabledRef.current = nextState;
+            }}
+            className="w-full h-full border-0"
+          />
+        </div>
+      )}
+
+      {/* Dice Drawer */}
+      {isDiceTrayOpen && (
+        <div className={clsx("absolute top-20 right-4 z-50 transition-opacity duration-500", isTheaterMode ? "opacity-0 pointer-events-none" : "opacity-100")}>
+          <DiceTray
+            onRoll={(text, isPrivate) => {
+              if (!isPrivate) {
+                handleHostSendMessage(text, true);
+              }
+            }}
+            onClose={() => setIsDiceTrayOpen(false)}
+          />
+        </div>
+      )}
+
+      <div className={clsx("transition-opacity duration-500", isTheaterMode ? "opacity-0 pointer-events-none" : "opacity-100")}>
       <ProjectCanvasMenus
         tool={tool}
         setTool={setTool}
@@ -1537,6 +1703,7 @@ return (
         
         activeLayers={activeLayers}
       />
+      </div>
 
       <div className="flex-1 relative h-full w-full overflow-hidden">
         
@@ -2013,6 +2180,7 @@ return (
 
 
         {/* Context Menu */}
+        <div className={clsx("transition-opacity duration-500", isTheaterMode ? "opacity-0 pointer-events-none" : "opacity-100")}>
         <ProjectCanvasContextMenu
           contextMenu={contextMenu}
           setContextMenu={setContextMenu}
@@ -2042,6 +2210,7 @@ return (
           linkSoundboardItemToAudio={linkSoundboardItemToAudio}
           deleteWallPersisted={deleteWallPersisted}
         />
+        </div>
 
         {/* Batch Audio Upload Modal */}
         {pendingUploads && (
@@ -2070,6 +2239,7 @@ return (
         }
 
         {/* Session/Invite Bar & Modal */}
+        <div className={clsx("transition-opacity duration-500", isTheaterMode ? "opacity-0 pointer-events-none" : "opacity-100")}>
         <ProjectSessionUI
           isSessionActive={isSessionActive}
           setIsSessionActive={setIsSessionActive}
@@ -2080,9 +2250,17 @@ return (
           sessionListeners={sessionListeners}
           projectId={projectId as string}
           onKickListener={handleKickListener}
+          isChatOpen={isChatOpen}
+          setIsChatOpen={toggleChat}
+          hasUnreadMessages={hasUnreadMessages}
+          isDiceTrayOpen={isDiceTrayOpen}
+          setIsDiceTrayOpen={setIsDiceTrayOpen}
         />
+        </div>
       </div>
-      <BottomToolbar onDragStart={handleDragStart} tool={tool} setTool={setTool} />
+      <div className={clsx("transition-opacity duration-500", isTheaterMode ? "opacity-0 pointer-events-none" : "opacity-100")}>
+        <BottomToolbar onDragStart={handleDragStart} tool={tool} setTool={setTool} />
+      </div>
     </div >
   );
 }

@@ -43,10 +43,12 @@ export default function App({ Component, pageProps }: AppProps) {
                 <FeedbackWidget />
                 
                 {mounted && (
-                  <SettingsModal 
-                    isOpen={isSettingsOpen} 
-                    onClose={() => setIsSettingsOpen(false)} 
-                  />
+                  <>
+                    <SettingsModal 
+                      isOpen={isSettingsOpen} 
+                      onClose={() => setIsSettingsOpen(false)} 
+                    />
+                  </>
                 )}
               </div>
             </IDBProvider>

@@ -159,7 +159,7 @@ const ListenersMenu: React.FC<ListenersMenuProps> = ({
             dragMomentum={false}
             dragElastic={0}
             dragConstraints={constraintRef}
-            className={`absolute flex flex-col bg-white dark:bg-neutral-900 dark:border dark:border-neutral-800 rounded-sm shadow-2xl overflow-hidden pointer-events-auto p-4`}
+            className={`absolute flex flex-col bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-gray-200/50 dark:border-white/10 rounded-sm shadow-2xl overflow-hidden pointer-events-auto p-4 animate-in fade-in zoom-in-95 duration-200`}
             onContextMenu={(e) => e.preventDefault()}
             onPointerDownCapture={onInteraction}
         >

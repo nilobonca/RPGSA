@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, X, Check } from 'lucide-react';
+import { Users, X, Check, MessageSquare, Dices } from 'lucide-react';
 
 interface ProjectSessionUIProps {
   isSessionActive: boolean;
@@ -11,6 +11,11 @@ interface ProjectSessionUIProps {
   sessionListeners: any[];
   projectId: string;
   onKickListener?: (listenerId: string) => void;
+  isChatOpen: boolean;
+  setIsChatOpen: (open: boolean) => void;
+  hasUnreadMessages?: boolean;
+  isDiceTrayOpen?: boolean;
+  setIsDiceTrayOpen?: (open: boolean) => void;
 }
 
 export function ProjectSessionUI({
@@ -22,14 +27,19 @@ export function ProjectSessionUI({
   setListenersOpen,
   sessionListeners,
   projectId,
-  onKickListener
+  onKickListener,
+  isChatOpen,
+  setIsChatOpen,
+  hasUnreadMessages,
+  isDiceTrayOpen,
+  setIsDiceTrayOpen
 }: ProjectSessionUIProps) {
   const [copied, setCopied] = useState(false);
 
   return (
     <>
       {/* Session/Invite Bar (Desktop) */}
-      <div className="hidden md:flex fixed top-4 right-4 z-50 items-center gap-2 bg-white/90 dark:bg-neutral-900/90 px-3 py-2 rounded shadow-md backdrop-blur-sm border border-gray-200 dark:border-neutral-700 select-none pointer-events-auto">
+      <div className="hidden md:flex fixed top-4 right-4 z-50 items-center gap-2 bg-white/60 dark:bg-neutral-900/60 px-3 py-2 rounded shadow-md backdrop-blur-md border border-gray-200/50 dark:border-white/10 select-none pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
         {isSessionActive && (
           <div className="flex items-center gap-1.5 mr-2">
             <span className="flex h-2.5 w-2.5 relative">
@@ -47,6 +57,20 @@ export function ProjectSessionUI({
           <Users size={14} />
           Convidar
         </button>
+        
+        <div className="h-4 w-px bg-gray-300 dark:bg-neutral-700 mx-1"></div>
+
+        <button
+          onClick={() => setIsDiceTrayOpen && setIsDiceTrayOpen(!isDiceTrayOpen)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors cursor-pointer ${
+            isDiceTrayOpen 
+              ? 'bg-indigo-600 text-white' 
+              : 'bg-transparent text-gray-600 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-neutral-800'
+          }`}
+        >
+          <Dices size={14} />
+          Dados
+        </button>
 
         {isSessionActive && (
           <>
@@ -62,6 +86,22 @@ export function ProjectSessionUI({
               <Users size={14} />
               Ouvintes ({sessionListeners.length})
             </button>
+            <button
+              onClick={() => setIsChatOpen(!isChatOpen)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors cursor-pointer relative ${
+                isChatOpen 
+                  ? 'bg-indigo-600 text-white' 
+                  : hasUnreadMessages
+                    ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
+                    : 'bg-transparent text-gray-600 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-neutral-800'
+              }`}
+            >
+              <MessageSquare size={14} className={hasUnreadMessages && !isChatOpen ? 'animate-pulse' : ''} />
+              Chat
+              {hasUnreadMessages && !isChatOpen && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white dark:border-neutral-900"></span>
+              )}
+            </button>
           </>
         )}
       </div>
@@ -69,7 +109,7 @@ export function ProjectSessionUI({
       {/* Invite Modal Overlay */}
       {showInviteModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-auto">
-          <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-gray-200/50 dark:border-white/10 rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -183,7 +223,7 @@ export function ProjectSessionUI({
 
       {/* Listeners Dropdown */}
       {listenersOpen && isSessionActive && (
-        <div className="fixed top-16 right-4 z-50 w-64 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="fixed top-16 right-4 z-50 w-64 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-gray-200/50 dark:border-white/10 rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="bg-gray-50 dark:bg-neutral-800/50 px-3 py-2 border-b border-gray-200 dark:border-neutral-800 flex justify-between items-center">
             <span className="text-xs font-semibold text-gray-700 dark:text-neutral-300">Ouvintes Conectados</span>
             <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full">

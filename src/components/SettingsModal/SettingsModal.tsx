@@ -7,6 +7,8 @@ import { useIDB } from '@/utils/indexedDB';
 import { ExportModal } from '@/components/ExportModal';
 import { ImportConflictModal } from '@/components/ImportConflictModal';
 import { parseBackupFile, ParsedImportData } from '@/utils/exportSystem/importUtils';
+import { ChatLogModal } from './ChatLogModal';
+import { MessageSquareText } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -14,13 +16,27 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const { theme, setTheme } = useThemeStore();
+  const { 
+    theme, 
+    setTheme,
+    isSettingsOpen,
+    setIsSettingsOpen,
+    audioVizEnabled,
+    audioVizColor,
+    audioVizIntensity,
+    setAudioVizEnabled,
+    setAudioVizColor,
+    setAudioVizIntensity,
+    areaRippleEnabled,
+    setAreaRippleEnabled,
+  } = useThemeStore();
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const { activeLayers } = useIDB();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [parsedImportData, setParsedImportData] = useState<ParsedImportData | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isChatLogModalOpen, setIsChatLogModalOpen] = useState(false);
   
   // Extract project/page ID from URL if inside a project
   // Typical route: /project/[id]?page=[pageId]
@@ -58,7 +74,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 max-h-[60vh] overflow-y-auto">
           <h3 className={clsx("mb-4 text-sm font-semibold tracking-wide uppercase", theme === 'ethereal' ? "text-neutral-500" : "text-neutral-400")}>
             Aparência
           </h3>
@@ -168,9 +184,147 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   e.target.value = '';
                 }}
               />
-            </label>
+              </label>
+            </div>
+
+            {currentProjectId && (
+              <>
+                <h3 className={clsx("mt-8 mb-4 text-sm font-semibold tracking-wide uppercase", theme === 'ethereal' ? "text-neutral-500" : "text-neutral-400")}>
+                  Logs da Sessão
+                </h3>
+                <button
+                  onClick={() => setIsChatLogModalOpen(true)}
+                  className={clsx(
+                    "flex items-center gap-3 p-4 border transition-all duration-300 w-full hover:scale-[1.01]",
+                    theme === 'ethereal'
+                      ? "border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400"
+                      : "border-neutral-800 bg-neutral-950 hover:border-purple-600 text-neutral-300 hover:text-purple-500",
+                    theme === 'ethereal' ? "rounded-[1.5rem]" : "rounded-lg"
+                  )}
+                >
+                  <MessageSquareText size={24} className="flex-shrink-0" />
+                  <div className="text-left">
+                    <div className="font-medium text-inherit">Histórico do Chat</div>
+                    <div className="text-xs opacity-70">Visualize, baixe ou apague o log permanente de mensagens e rolagens.</div>
+                  </div>
+                </button>
+              </>
+            )}
+
+            {/* Audio Visualizer Settings */}
+            <h3 className={clsx("mt-8 mb-4 text-sm font-semibold tracking-wide uppercase", theme === 'ethereal' ? "text-neutral-500" : "text-neutral-400")}>
+              Efeito Visual de Áudio
+            </h3>
+            <div className={clsx(
+              "p-4 border transition-all duration-300 space-y-5",
+              theme === 'ethereal'
+                ? "border-white/10 bg-white/5 rounded-[1.5rem]"
+                : "border-neutral-800 bg-neutral-950 rounded-lg"
+            )}>
+              {/* Toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-sm text-neutral-200">Brilho nas Bordas</div>
+                  <div className="text-xs text-neutral-500">Tela pulsa com o ritmo da música</div>
+                </div>
+                <button
+                  onClick={() => setAudioVizEnabled(!audioVizEnabled)}
+                  className={clsx(
+                    "relative w-11 h-6 rounded-full transition-colors duration-200",
+                    audioVizEnabled ? "bg-indigo-500" : "bg-neutral-700"
+                  )}
+                >
+                  <span className={clsx(
+                    "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200",
+                    audioVizEnabled && "translate-x-5"
+                  )} />
+                </button>
+              </div>
+
+              {/* Area Ripple Toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-sm text-neutral-200">Ondas nas Áreas</div>
+                  <div className="text-xs text-neutral-500">Ondas sonoras emanam do centro das áreas ativas</div>
+                </div>
+                <button
+                  onClick={() => setAreaRippleEnabled(!areaRippleEnabled)}
+                  className={clsx(
+                    "relative w-11 h-6 rounded-full transition-colors duration-200",
+                    areaRippleEnabled ? "bg-indigo-500" : "bg-neutral-700"
+                  )}
+                >
+                  <span className={clsx(
+                    "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200",
+                    areaRippleEnabled && "translate-x-5"
+                  )} />
+                </button>
+              </div>
+              {audioVizEnabled && (
+                <>
+                  {/* Color */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-sm text-neutral-200">Cor do Efeito</div>
+                      <div className="text-xs text-neutral-500">Escolha a cor do brilho</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {['#818cf8', '#f472b6', '#34d399', '#fbbf24', '#f87171', '#a78bfa'].map(color => (
+                        <button
+                          key={color}
+                          onClick={() => setAudioVizColor(color)}
+                          className={clsx(
+                            "w-7 h-7 rounded-full border-2 transition-all duration-200 hover:scale-110",
+                            audioVizColor === color ? "border-white scale-110" : "border-transparent"
+                          )}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                      <input
+                        type="color"
+                        value={audioVizColor}
+                        onChange={(e) => setAudioVizColor(e.target.value)}
+                        className="w-7 h-7 rounded-full cursor-pointer border-0 bg-transparent"
+                        title="Cor personalizada"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Intensity */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <div className="font-medium text-sm text-neutral-200">Intensidade</div>
+                        <div className="text-xs text-neutral-500">Controla o tamanho e força do brilho</div>
+                      </div>
+                      <span className="text-xs font-mono text-neutral-400">{Math.round(audioVizIntensity * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="200"
+                      value={Math.round(audioVizIntensity * 100)}
+                      onChange={(e) => setAudioVizIntensity(Number(e.target.value) / 100)}
+                      className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-neutral-700 accent-indigo-500"
+                    />
+                  </div>
+
+                  {/* Preview */}
+                  <div 
+                    className="relative h-16 rounded-xl overflow-hidden border border-white/10"
+                    style={{
+                      boxShadow: `inset 0 0 80px ${audioVizColor}88`,
+                      backgroundColor: '#0a0a0a'
+                    }}
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500">
+                      Prévia do efeito
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
 
         <div className="p-6 border-t border-white/10 flex justify-end">
           <button
@@ -203,6 +357,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           window.location.reload();
         }}
       />
+      
+      {currentProjectId && (
+        <ChatLogModal
+          isOpen={isChatLogModalOpen}
+          onClose={() => setIsChatLogModalOpen(false)}
+          projectId={currentProjectId}
+        />
+      )}
     </div>
   );
 };
