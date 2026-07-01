@@ -27,6 +27,25 @@ export default function ListenerSession() {
     const [chatSoundEnabled, setChatSoundEnabled] = useState(true);
     const chatSoundEnabledRef = useRef(true);
 
+    // Clicker & Coin Flip Minigame State
+    const [isClickerActive, setIsClickerActive] = useState(false);
+    const [isFadingOut, setIsFadingOut] = useState(false);
+    const [clickerConfig, setClickerConfig] = useState<any>(null);
+    const [localClicks, setLocalClicks] = useState(0);
+    const [gameOver, setGameOver] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(0);
+    const [clickEffect, setClickEffect] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    
+    // Coin Flip specific state
+    const [coinState, setCoinState] = useState<'idle' | 'spinning' | 'result'>('idle');
+    const [coinResultFace, setCoinResultFace] = useState<'heads' | 'tails' | null>(null);
+    const [coinCanInteract, setCoinCanInteract] = useState(false);
+    const coinSpinTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const coinStateRef = useRef<'idle' | 'spinning' | 'result'>('idle');
+    const resolveCoinFlipRef = useRef<((forcedResult?: 'heads' | 'tails') => void) | null>(null);
+    const forcedCoinResultRef = useRef<'heads' | 'tails' | null>(null);
+
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const streamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -59,6 +78,59 @@ export default function ListenerSession() {
         }
     };
 
+    const sendClickProgress = useCallback((clicks: number, coinResult?: string) => {
+        if (channelRef.current) {
+            channelRef.current.send({
+                type: 'minigame_progress',
+                payload: { clicks, coinResult }
+            });
+        }
+    }, []);
+
+    const handleMinigameClick = useCallback(() => {
+        if (!isClickerActive || gameOver) return;
+        
+        const newClicks = localClicks + 1;
+        setLocalClicks(newClicks);
+        
+        setClickEffect(true);
+        setTimeout(() => setClickEffect(false), 100);
+        
+        if (chatSoundEnabledRef.current) {
+            try {
+                const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(60 + Math.random() * 20, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80 + Math.random() * 20, ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 0.03);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.15);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.15);
+            } catch (e) {}
+        }
+
+        sendClickProgress(newClicks);
+
+        if (clickerConfig?.config?.autoClose && newClicks >= (clickerConfig.config.targetClicks || 100)) {
+            setGameOver(true);
+            
+            // Wait a moment so the user sees the final click (e.g., 100/100) before it starts fading out
+            setTimeout(() => {
+                setIsFadingOut(true);
+                const fadeTime = clickerConfig.config.fadeoutTime !== undefined ? Number(clickerConfig.config.fadeoutTime) : 2;
+                setTimeout(() => {
+                    setIsClickerActive(false);
+                    setIsFadingOut(false);
+                }, fadeTime * 1000);
+            }, 500);
+        }
+    }, [isClickerActive, gameOver, localClicks, sendClickProgress, clickerConfig]);
+
     const handleSendMessage = useCallback((text: string, isRoll?: boolean) => {
         if (!channelRef.current) return;
 
@@ -77,6 +149,50 @@ export default function ListenerSession() {
         // Add to local UI
         setChatMessages(prev => [...prev, msg]);
     }, [listenerId, username]);
+
+    const resolveCoinFlip = useCallback((forcedResult?: 'heads' | 'tails') => {
+        if (coinSpinTimerRef.current) {
+            clearTimeout(coinSpinTimerRef.current);
+            coinSpinTimerRef.current = null;
+        }
+        const forced = forcedResult || forcedCoinResultRef.current;
+        forcedCoinResultRef.current = null;
+        const predefined = clickerConfig?.config?.predefinedResult;
+        const result = forced 
+            || (predefined === 'heads' || predefined === 'tails' ? predefined : undefined)
+            || (Math.random() > 0.5 ? 'heads' : 'tails');
+        
+        const newClicks = localClicks + 1;
+        setLocalClicks(newClicks);
+        setCoinResultFace(result);
+        setCoinState('result');
+        coinStateRef.current = 'result';
+        sendClickProgress(newClicks, result);
+        handleSendMessage(`🪙 girou a moeda e tirou **${result === 'heads' ? 'Cara' : 'Coroa'}**!`, true);
+    }, [clickerConfig, localClicks, sendClickProgress, handleSendMessage]);
+
+    // Keep refs in sync
+    useEffect(() => {
+        resolveCoinFlipRef.current = resolveCoinFlip;
+    }, [resolveCoinFlip]);
+
+    const handleCoinClick = useCallback(() => {
+        if (!isClickerActive || gameOver || !coinCanInteract || coinState !== 'idle') return;
+        
+        setCoinState('spinning');
+        coinStateRef.current = 'spinning';
+        if (channelRef.current) {
+            channelRef.current.send({
+                type: 'coin_spinning',
+                payload: { spinning: true }
+            });
+        }
+        
+        if (coinSpinTimerRef.current) clearTimeout(coinSpinTimerRef.current);
+        coinSpinTimerRef.current = setTimeout(() => {
+            resolveCoinFlip();
+        }, 4000);
+    }, [isClickerActive, gameOver, coinCanInteract, coinState, resolveCoinFlip]);
 
     // Generate a unique listenerId on mount
     useEffect(() => {
@@ -168,6 +284,7 @@ export default function ListenerSession() {
         if (!username.trim() || !projectId) return;
 
         setStatus('connecting');
+        setErrorMessage(null);
         initAudioGraph();
 
         const initPeer = async () => {
@@ -210,6 +327,41 @@ export default function ListenerSession() {
                         } else if (data.type === 'chat') {
                             setChatMessages(prev => [...prev, data.payload]);
                             playPing();
+                        } else if (data.type === 'minigame_start') {
+                            const payload = data.payload;
+                            if (payload.gameType === 'coin_flip') {
+                                const permissions = payload.config?.permissions || {};
+                                const userPerms = permissions[listenerId] || { canSee: true, canInteract: false };
+                                
+                                if (userPerms.canSee) {
+                                    setIsClickerActive(true);
+                                    setIsFadingOut(false);
+                                    setClickerConfig(payload);
+                                    setCoinCanInteract(userPerms.canInteract);
+                                    setCoinState('idle');
+                                    coinStateRef.current = 'idle';
+                                    setCoinResultFace(null);
+                                    setGameOver(false);
+                                    setTimeLeft(payload.config?.timeLimit || 30);
+                                }
+                            } else {
+                                setIsClickerActive(true);
+                                setIsFadingOut(false);
+                                setClickerConfig(payload);
+                                setLocalClicks(0);
+                                setGameOver(false);
+                                setTimeLeft(payload.config?.timeLimit || 30);
+                            }
+                        } else if (data.type === 'minigame_end') {
+                            setIsClickerActive(false);
+                            setGameOver(true);
+                            setTimeout(() => {
+                                setGameOver(false);
+                            }, 3000);
+                        } else if (data.type === 'force_coin_result') {
+                            if (coinStateRef.current === 'spinning') {
+                                forcedCoinResultRef.current = data.payload.result;
+                            }
                         }
                     });
 
@@ -258,8 +410,13 @@ export default function ListenerSession() {
                     });
                 });
 
-                peer.on('error', (err) => {
+                peer.on('error', (err: any) => {
                     console.error('[DEBUG] PeerJS client error:', err);
+                    if (err.type === 'peer-unavailable') {
+                        setErrorMessage('A sessão parece estar offline. Peça para o Mestre abrir a sala do Projeto primeiro.');
+                    } else {
+                        setErrorMessage('Erro de conexão: ' + err.message);
+                    }
                     setStatus('disconnected');
                 });
             } catch (err) {
@@ -321,6 +478,29 @@ export default function ListenerSession() {
         };
     }, []);
 
+    // Timer for clicker minigame
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (isClickerActive && !gameOver && timeLeft > 0 && clickerConfig?.gameType !== 'coin_flip') {
+            timer = setInterval(() => {
+                setTimeLeft(prev => {
+                    if (prev <= 1) {
+                        setGameOver(true);
+                        setTimeout(() => {
+                            setIsClickerActive(false);
+                            setGameOver(false);
+                        }, 3000);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => {
+            if (timer) clearInterval(timer);
+        };
+    }, [isClickerActive, gameOver, timeLeft, clickerConfig]);
+
     return (
         <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans relative overflow-hidden">
             <Head>
@@ -373,6 +553,15 @@ export default function ListenerSession() {
                             >
                                 {status === 'connecting' ? 'Conectando...' : 'Entrar na Aventura'}
                             </button>
+
+                            {errorMessage && (
+                                <div className="mt-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg flex items-start gap-2">
+                                    <span className="text-rose-400 text-lg leading-none">⚠️</span>
+                                    <p className="text-sm text-rose-300 leading-tight flex-1">
+                                        {errorMessage}
+                                    </p>
+                                </div>
+                            )}
                         </form>
                     </div>
                 </div>
@@ -520,6 +709,113 @@ export default function ListenerSession() {
                     <div className="text-[10px] text-neutral-600 text-center pt-4 select-none">
                         ID Ouvinte: {listenerId} • Visual Sound Design Multiplayer Engine v1.0
                     </div>
+
+                    {/* Clicker Minigame Overlay */}
+                    {isClickerActive && (
+                        <div 
+                            className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xl overflow-hidden transition-opacity ease-out ${isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                            style={{ transitionDuration: `${clickerConfig?.config?.fadeoutTime !== undefined ? clickerConfig.config.fadeoutTime : 2}s` }}
+                        >
+                            {/* Animated Background Elements */}
+                            <div className="absolute top-0 left-0 w-[800px] h-[800px] bg-white/5 rounded-full blur-[120px] opacity-50 animate-pulse" />
+                            <div className="absolute bottom-0 right-0 w-[800px] h-[800px] bg-neutral-600/5 rounded-full blur-[120px] opacity-50 animate-pulse" style={{ animationDelay: '2s' }} />
+
+                            <div className="relative z-10 flex flex-col items-center justify-center p-8 w-full max-w-2xl font-sans">
+                                <div className="text-center mb-16">
+                                    <h2 className="text-3xl font-light text-white/90 tracking-wide mb-3">
+                                        {clickerConfig?.title || (clickerConfig?.gameType === 'coin_flip' ? "Cara ou Coroa" : "Desafio de Cliques")}
+                                    </h2>
+                                    <p className="text-base text-neutral-400 font-light">
+                                        {clickerConfig?.description || (clickerConfig?.gameType === 'coin_flip' ? (coinCanInteract ? "Clique na moeda para girar." : "Aguarde o giro da moeda.") : "Clique o mais rápido possível.")}
+                                    </p>
+                                </div>
+
+                                {clickerConfig?.gameType === 'coin_flip' ? (
+                                    <>
+                                        <style dangerouslySetInnerHTML={{ __html: `
+                                            @keyframes spinY {
+                                                from { transform: rotateY(0deg); }
+                                                to { transform: rotateY(360deg); }
+                                            }
+                                        ` }} />
+                                        <div 
+                                            className={`mb-20 w-64 h-64 ${coinCanInteract && coinState === 'idle' ? 'cursor-pointer hover:scale-105' : ''} transition-transform duration-300 mx-auto`} 
+                                            style={{ perspective: '1000px' }}
+                                            onClick={handleCoinClick}
+                                        >
+                                            <div 
+                                                className="relative w-full h-full"
+                                                style={{
+                                                    transformStyle: 'preserve-3d',
+                                                    transform: coinState === 'result' ? (coinResultFace === 'tails' ? 'rotateY(180deg)' : 'rotateY(0deg)') : 'rotateY(0deg)',
+                                                    animation: coinState === 'spinning' ? 'spinY 0.3s linear infinite' : 'none',
+                                                    transition: coinState !== 'spinning' ? 'transform 0.5s ease-out' : 'none'
+                                                }}
+                                            >
+                                                {/* Front Face (Heads) */}
+                                                <div className="absolute inset-0 bg-yellow-500 rounded-full flex flex-col items-center justify-center border-[8px] border-yellow-600 shadow-[0_0_30px_rgba(234,179,8,0.3)]" style={{ backfaceVisibility: 'hidden' }}>
+                                                    <span className="text-5xl font-bold text-yellow-900 tracking-wider">CARA</span>
+                                                </div>
+                                                {/* Back Face (Tails) */}
+                                                <div className="absolute inset-0 bg-gray-300 rounded-full flex flex-col items-center justify-center border-[8px] border-gray-400 shadow-[0_0_30px_rgba(156,163,175,0.3)]" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                                                    <span className="text-5xl font-bold text-gray-800 tracking-wider">COROA</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+
+                                                {/* Timer */}
+                                                <div className="mb-16">
+                                                    <div className="text-7xl font-light text-white/90 font-mono tabular-nums tracking-tighter">
+                                                        00:{timeLeft.toString().padStart(2, '0')}
+                                                    </div>
+                                                </div>
+
+                                                {/* The Big Button */}
+                                                <button
+                                                    onClick={handleMinigameClick}
+                                                    className={`relative group mb-20 focus:outline-none transition-transform duration-300 ease-out ${clickEffect ? 'scale-[0.98]' : 'scale-100 hover:scale-[1.02]'} ${clickerConfig?.config?.imageUrl ? '' : 'rounded-full'}`}
+                                                >
+                                                    {clickerConfig?.config?.imageUrl ? (
+                                                        <div className="w-64 h-64 relative flex items-center justify-center drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)] group-hover:drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)] transition-all duration-500">
+                                                            <img 
+                                                                src={clickerConfig.config.imageUrl} 
+                                                                alt="Minigame target" 
+                                                                className="w-full h-full object-contain pointer-events-none"
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="relative w-48 h-48 bg-neutral-900/50 border border-white/5 rounded-full flex items-center justify-center shadow-[0_20px_40px_rgba(0,0,0,0.4)] group-hover:shadow-[0_25px_50px_rgba(0,0,0,0.6)] backdrop-blur-md transition-all duration-500">
+                                                            <div className="w-32 h-32 bg-[#111] rounded-full shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] flex items-center justify-center border border-white/5">
+                                                                <span className="text-neutral-500 font-light text-xl tracking-[0.2em] select-none group-hover:text-neutral-300 transition-colors">CLICAR</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </button>
+
+                                                {/* Progress Bar */}
+                                                {!clickerConfig?.config?.hideTarget && (
+                                                    <div className="w-full max-w-sm bg-neutral-900/50 border border-white/5 rounded-full h-2 relative overflow-hidden backdrop-blur-sm">
+                                                        <div 
+                                                            className="h-full rounded-full bg-[#D4C4A8] opacity-80 transition-all duration-500 ease-out relative"
+                                                            style={{ width: `${Math.min(100, (localClicks / (clickerConfig?.config?.targetClicks || 100)) * 100)}%` }}
+                                                        />
+                                                    </div>
+                                                )}
+                                                <div className="mt-4 text-xs font-light text-neutral-500 tracking-wider">
+                                                    {clickerConfig?.config?.hideTarget ? (
+                                                        <span>Cliques: {localClicks}</span>
+                                                    ) : (
+                                                        <span>{localClicks} / {clickerConfig?.config?.targetClicks || 100}</span>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

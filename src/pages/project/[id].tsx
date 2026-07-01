@@ -9,6 +9,7 @@ import { useCanvasSelection } from '@/hooks/useCanvasSelection';
 import { useCanvasUI } from '@/hooks/useCanvasUI';
 import { useProjectState } from '@/hooks/useProjectState';
 import { useCanvasGlobalStore } from '@/store/canvasStore';
+import { useMinigamesStore } from '@/store/minigamesStore';
 import { useCanvasShortcuts } from '@/hooks/useCanvasShortcuts';
 import { useAudioInteractions } from '@/hooks/useAudioInteractions';
 import { isPointInPolygon, getPolygonCentroid } from '@/hooks/useCanvasMath';
@@ -64,21 +65,17 @@ export default function ProjectCanvas() {
 
   const isTheaterMode = useCanvasGlobalStore(state => state.isTheaterMode);
   const setIsTheaterMode = useCanvasGlobalStore(state => state.setIsTheaterMode);
-
+  
+  const setBroadcastEvent = useMinigamesStore(state => state.setBroadcastEvent);
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F10') {
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-          return;
+    setBroadcastEvent((event) => {
+      Object.values(connectionsRef.current).forEach((conn: any) => {
+        if (conn && conn.open) {
+          conn.send(event);
         }
-        e.preventDefault();
-        setIsTheaterMode(!isTheaterMode);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isTheaterMode, setIsTheaterMode]);
+      });
+    });
+  }, [setBroadcastEvent]);
 
   const { theme } = useThemeStore();
   const [mounted, setMounted] = useState(false);
@@ -231,7 +228,15 @@ export default function ProjectCanvas() {
     updateNotePersisted,
     deleteNotePersisted,
     updateAudioPersisted,
-    activeGlobalTracks
+    activeGlobalTracks,
+    realActiveAreas,
+    realActivePins,
+    realActiveWalls,
+    realActiveGlobalTracks,
+    isPreviewMode,
+    startPreview,
+    commitPreview,
+    discardPreview
    } = useIDB();
  
   const {
@@ -355,7 +360,18 @@ export default function ProjectCanvas() {
     activePlayers, activeImages, activeAreas, activePins, activeNotes, activeSoundboardItems, activeWalls,
     deletePlayer, deleteImagePersisted, deleteArea, deletePinPersisted, deleteNotePersisted, deleteSoundboardItemPersisted, deleteWallPersisted,
     addToHistory, handleUndo, handleRedo,
-    toggleDiceTray: () => setIsDiceTrayOpen(prev => !prev)
+    toggleDiceTray: () => setIsDiceTrayOpen(prev => !prev),
+    toggleChat: () => toggleChat(!isChatOpen),
+    setTool,
+    isPreviewMode, startPreview, discardPreview,
+    isTheaterMode, setIsTheaterMode,
+    stopAllAudio: () => {
+      activeGlobalTracks.forEach(track => {
+        if (track.isPlaying) {
+          updateGlobalTrackPersisted({ ...track, isPlaying: false });
+        }
+      });
+    }
   });
 
   const createSoundboardButton = (position: { x: number; y: number }) => {
@@ -722,7 +738,8 @@ export default function ProjectCanvas() {
     }
 
     const projectTracks = activeGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId);
-    calculateInteractions(currentActivePins, currentActiveAreas, activeWalls, projectTracks);
+    const realProjectTracks = realActiveGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId);
+    calculateInteractions(currentActivePins, currentActiveAreas, activeWalls, projectTracks, realActivePins, realActiveAreas, realActiveWalls, realProjectTracks);
   };
 
   const linkAreaToAudio = (areaId: string, audioId: number) => {
@@ -800,17 +817,22 @@ export default function ProjectCanvas() {
     return activeGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId);
   }, [activeGlobalTracks, projectId]);
 
+  const realProjectGlobalTracks = useMemo(() => {
+    return realActiveGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId);
+  }, [realActiveGlobalTracks, projectId]);
+
   // Create a hash of audio-relevant properties to avoid recalculating interactions on visual updates (like color changes)
   const interactionsDependenciesHash = useMemo(() => {
     const pinsStr = activePins.map(p => `${p.id}:${p.position.x},${p.position.y}:${p.enabled}`).join('|');
     const areasStr = activeAreas.map(a => `${a.id}:${a.points.map(pt => `${pt.x},${pt.y}`).join(';')}:${a.audioRotation}:${a.filterType}:${a.linkedAudioId}:${a.volumeMode}:${a.proximityRadius}:${a.volume}:${a.pitch}`).join('|');
     const wallsStr = activeWalls.map(w => `${w.id}:${w.points.map(pt => `${pt.x},${pt.y}`).join(';')}:${w.mufflingFactor}`).join('|');
     const tracksStr = projectGlobalTracks.map(t => `${t.id}:${t.linkedAudioId}:${t.isPlaying}:${t.volume}`).join('|');
-    return `${pinsStr}#${areasStr}#${wallsStr}#${tracksStr}`;
-  }, [activePins, activeAreas, activeWalls, projectGlobalTracks]);
+    const realTracksStr = realProjectGlobalTracks.map(t => `${t.id}:${t.linkedAudioId}:${t.isPlaying}:${t.volume}`).join('|');
+    return `${pinsStr}#${areasStr}#${wallsStr}#${tracksStr}#${realActivePins.length}#${realActiveAreas.length}#${realActiveWalls.length}#${realTracksStr}`;
+  }, [activePins, activeAreas, activeWalls, projectGlobalTracks, realActivePins, realActiveAreas, realActiveWalls, realProjectGlobalTracks]);
 
   useEffect(() => {
-    calculateInteractions(activePins, activeAreas, activeWalls, projectGlobalTracks);
+    calculateInteractions(activePins, activeAreas, activeWalls, projectGlobalTracks, realActivePins, realActiveAreas, realActiveWalls, realProjectGlobalTracks);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interactionsDependenciesHash, calculateInteractions]);
 
@@ -1039,6 +1061,10 @@ export default function ProjectCanvas() {
                   [listenerId]: rtt
                 }));
               }
+            } else if (data.type === 'coin_spinning') {
+              useMinigamesStore.getState().setSpinning(listenerId, data.payload.spinning, name);
+            } else if (data.type === 'minigame_progress') {
+              useMinigamesStore.getState().updateProgress(listenerId, data.payload.clicks, name, data.payload.coinResult);
             } else if (data.type === 'chat') {
                 const msg: ChatMessage = data.payload;
                 setChatMessages(prev => {
@@ -1292,7 +1318,8 @@ export default function ProjectCanvas() {
       }
     } else {
       const projectTracks = activeGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId);
-      calculateInteractions(currentActivePins, currentActiveAreas, activeWalls, projectTracks);
+      const realProjectTracks = realActiveGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId);
+      calculateInteractions(currentActivePins, currentActiveAreas, activeWalls, projectTracks, realActivePins, realActiveAreas, realActiveWalls, realProjectTracks);
     }
   };
 
@@ -1414,7 +1441,7 @@ export default function ProjectCanvas() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tool, currentAreaPoints, currentWallPoints, activeAreas.length, activeWalls.length, activeProjectId]);
+  }, [tool, currentAreaPoints, currentWallPoints, activeAreas.length, activeWalls.length, activeProjectId, isPreviewMode, startPreview, discardPreview]);
 
   const handleSelectionChange = useCallback((rect: { x: number; y: number; width: number; height: number } | null) => {
     if (!rect) {
@@ -1574,6 +1601,31 @@ return (
       "flex flex-col md:flex-row h-screen w-screen overflow-hidden transition-colors duration-500",
       isEthereal ? "bg-[#050505]" : "bg-gray-200"
     )}>
+      {isPreviewMode && (
+        <>
+          <div className="fixed inset-0 z-[49] pointer-events-none" style={{ boxShadow: 'inset 0 0 20px 5px rgba(245, 158, 11, 0.5)' }} />
+          <div className="fixed top-0 left-0 right-0 z-[60] bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-between shadow-md font-sans">
+            <div className="flex items-center gap-2 font-medium">
+              <span>⚠️</span>
+              <span>Modo Preview (Jogadores não estão ouvindo alterações)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => discardPreview?.()}
+                className="px-3 py-1 text-sm font-medium hover:bg-amber-600/30 rounded-md transition-colors"
+              >
+                Descartar
+              </button>
+              <button 
+                onClick={() => commitPreview?.()}
+                className="px-3 py-1 text-sm font-medium bg-amber-950 text-amber-400 hover:bg-amber-900 rounded-md transition-colors shadow-sm"
+              >
+                Aplicar ao Vivo
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Clear Canvas Confirmation Modal */}
       {clearConfirmation?.open && (

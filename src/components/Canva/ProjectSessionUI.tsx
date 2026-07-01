@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, X, Check, MessageSquare, Dices } from 'lucide-react';
+import { Users, X, Check, MessageSquare, Dices, Power } from 'lucide-react';
 
 interface ProjectSessionUIProps {
   isSessionActive: boolean;
@@ -40,15 +40,30 @@ export function ProjectSessionUI({
     <>
       {/* Session/Invite Bar (Desktop) */}
       <div className="hidden md:flex fixed top-4 right-4 z-50 items-center gap-2 bg-white/60 dark:bg-neutral-900/60 px-3 py-2 rounded shadow-md backdrop-blur-md border border-gray-200/50 dark:border-white/10 select-none pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
-        {isSessionActive && (
-          <div className="flex items-center gap-1.5 mr-2">
-            <span className="flex h-2.5 w-2.5 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
-            </span>
-            <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Ao Vivo</span>
-          </div>
-        )}
+        <button
+          onClick={() => setIsSessionActive(!isSessionActive)}
+          className={`flex items-center gap-1.5 mr-2 px-3 py-1.5 rounded transition-colors cursor-pointer text-xs font-semibold uppercase tracking-wider ${
+            isSessionActive 
+              ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20'
+              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+          }`}
+          title={isSessionActive ? "Desligar Sessão" : "Ligar Sessão"}
+        >
+          {isSessionActive ? (
+            <>
+              <span className="flex h-2.5 w-2.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+              </span>
+              <span>Ao Vivo</span>
+            </>
+          ) : (
+            <>
+              <Power size={14} />
+              <span>Offline</span>
+            </>
+          )}
+        </button>
         
         <button
           onClick={() => setShowInviteModal(true)}

@@ -20,7 +20,16 @@ export const useAudioInteractions = (
   const setAudioFilters = useCanvasGlobalStore(state => state.setAudioFilters);
   const masterVolume = useCanvasGlobalStore(state => state.masterVolume);
 
-  const calculateInteractions = useCallback((pins: ActivePin[], areas: ActiveArea[], walls: ActiveWall[] = [], globalTracks: ActiveGlobalTrack[] = []) => {
+  const calculateInteractions = useCallback((
+    pins: ActivePin[], 
+    areas: ActiveArea[], 
+    walls: ActiveWall[] = [], 
+    globalTracks: ActiveGlobalTrack[] = [],
+    realPins: ActivePin[] = [],
+    realAreas: ActiveArea[] = [],
+    realWalls: ActiveWall[] = [],
+    realGlobalTracks: ActiveGlobalTrack[] = []
+  ) => {
     console.log("[useAudioInteractions] calculateInteractions called!", {
       isSessionActive,
       listeners: sessionListeners.length,
@@ -103,7 +112,7 @@ export const useAudioInteractions = (
     if (ctx && isSessionActive && sessionListeners.length > 0) {
       sessionListeners.forEach(listener => {
         const pinId = `listener:${listener.listenerId}`;
-        const pin = pins.find(p => p.id === pinId);
+        const pin = realPins.find(p => p.id === pinId);
         const graph = getOrCreateListenerGraph(listener.listenerId);
         
         if (!graph) return;
@@ -113,7 +122,7 @@ export const useAudioInteractions = (
         if (pin && pin.enabled) {
           const hotspot = { x: pin.position.x + 24, y: pin.position.y + 48 };
 
-          areas.forEach(area => {
+          realAreas.forEach(area => {
           if (area.linkedAudioId && isPointInPolygon(hotspot, area.points)) {
             const audio = savedAudios.find(a => a.id === area.linkedAudioId || a.id === Number(area.linkedAudioId));
             if (audio) {
@@ -136,7 +145,7 @@ export const useAudioInteractions = (
               }
 
               // Wall occlusion
-              const isOccluded = doesIntersectWalls(hotspot, sourcePoint, walls);
+              const isOccluded = doesIntersectWalls(hotspot, sourcePoint, realWalls);
               const occlusionAttenuation = isOccluded ? 0.2 : 1.0;
 
               const areaMasterVolume = area.volume !== undefined ? area.volume : 1.0;
@@ -268,10 +277,11 @@ export const useAudioInteractions = (
         });
         }
 
-        // 2. Global Tracks (No spatial logic, just pure audio injection)
-        console.log(`[useAudioInteractions] Processing ${globalTracks.length} global tracks for listener ${listener.listenerId}`);
-        globalTracks.forEach(track => {
+        // Handle Global Tracks for this listener (using realGlobalTracks)
+        const activeGlobalTrackIds = new Set<string>();
+        realGlobalTracks.forEach(track => {
           if (track.isPlaying) {
+            activeGlobalTrackIds.add(track.id);
             const audio = savedAudios.find(a => a.id === track.linkedAudioId || a.id === Number(track.linkedAudioId));
             if (audio) {
               const sourceKey = `global-${track.id}`;
@@ -279,7 +289,6 @@ export const useAudioInteractions = (
               
               let src = graph.activeSources.get(sourceKey);
               if (!src) {
-                console.log(`[useAudioInteractions] Creating WebRTC source for global track ${track.id}`);
                 let objectUrl = audio.url || objectUrlsRef.current.get(audio.id);
                 if (!objectUrl && audio.file) {
                   objectUrl = URL.createObjectURL(audio.file);
@@ -310,7 +319,6 @@ export const useAudioInteractions = (
                   sourceNode.connect(gainNode);
                   gainNode.connect(graph.destination);
 
-                  console.log(`[useAudioInteractions] Calling audioEl.play() for global track ${track.id}`);
                   const playPromise = audioEl.play();
                   if (playPromise !== undefined) {
                     playPromise.catch(e => {
@@ -326,7 +334,8 @@ export const useAudioInteractions = (
                     filterNode: null,
                     audioId: audio.id,
                     playerId: track.id,
-                    isPlaying: track.isPlaying
+                    isPlaying: track.isPlaying,
+                    isGlobal: true
                   };
                   graph.activeSources.set(sourceKey, src);
                 } catch (err) {
@@ -337,15 +346,25 @@ export const useAudioInteractions = (
 
               if (src) {
                 src.isPlaying = track.isPlaying;
-                console.log(`[useAudioInteractions] Setting gain for global track ${track.id} to ${track.volume}`);
                 src.gainNode.gain.setTargetAtTime(track.volume, ctx.currentTime, 0.05);
               }
             }
           }
         });
 
+        // Handle areas the listener just left
+        const sourcesToRemove = new Set<string>();
         graph.activeSources.forEach((src: any, areaId: string) => {
-          if (!activeAreaIdsForListener.has(areaId)) {
+          if (!src.isGlobal && !activeAreaIdsForListener.has(areaId)) {
+            sourcesToRemove.add(areaId);
+          } else if (src.isGlobal && !activeGlobalTrackIds.has(src.playerId)) {
+            sourcesToRemove.add(areaId);
+          }
+        });
+
+        sourcesToRemove.forEach(areaId => {
+          const src = graph.activeSources.get(areaId);
+          if (src) {
             try {
               src.audioElement.pause();
               src.audioElement.removeAttribute('src');

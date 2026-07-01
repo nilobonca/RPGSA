@@ -8,6 +8,7 @@ type ThemeState = {
   audioVizColor: string;
   audioVizIntensity: number; // 0.0 to 2.0, default 1.0
   areaRippleEnabled: boolean;
+  pinnedMinigames: string[];
   setTheme: (theme: 'default' | 'ethereal') => void;
   toggleTheme: () => void;
   setIsSettingsOpen: (isOpen: boolean) => void;
@@ -15,6 +16,7 @@ type ThemeState = {
   setAudioVizColor: (color: string) => void;
   setAudioVizIntensity: (intensity: number) => void;
   setAreaRippleEnabled: (enabled: boolean) => void;
+  togglePinnedMinigame: (minigameId: string) => void;
 };
 
 export const useThemeStore = create<ThemeState>()(
@@ -26,6 +28,7 @@ export const useThemeStore = create<ThemeState>()(
       audioVizColor: '#818cf8', // indigo-400
       audioVizIntensity: 1.0,
       areaRippleEnabled: true,
+      pinnedMinigames: [], 
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => set((state) => ({ theme: state.theme === 'default' ? 'ethereal' : 'default' })),
       setIsSettingsOpen: (isOpen) => set({ isSettingsOpen: isOpen }),
@@ -33,6 +36,11 @@ export const useThemeStore = create<ThemeState>()(
       setAudioVizColor: (color) => set({ audioVizColor: color }),
       setAudioVizIntensity: (intensity) => set({ audioVizIntensity: intensity }),
       setAreaRippleEnabled: (enabled) => set({ areaRippleEnabled: enabled }),
+      togglePinnedMinigame: (id) => set((state) => ({
+        pinnedMinigames: state.pinnedMinigames.includes(id)
+          ? state.pinnedMinigames.filter(m => m !== id)
+          : [...state.pinnedMinigames, id]
+      })),
     }),
     {
       name: 'vsd-theme-storage',

@@ -1,8 +1,11 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import { 
-  Layers, Edit2, ArrowLeft, MapPin, History, Music, LayoutGrid, PenTool, MousePointer2, Globe, Headphones, Settings
+  Layers, Edit2, ArrowLeft, MapPin, History, Music, LayoutGrid, PenTool, MousePointer2, Globe, Headphones, Settings, Gamepad2, Coins
 } from 'lucide-react';
+import { useMinigamesStore } from '@/store/minigamesStore';
+import { ClickerMinigameHost } from './ClickerMinigameHost';
+import { CoinFlipMinigameHost } from './CoinFlipMinigameHost';
 import { useThemeStore } from '@/store/themeStore';
 import clsx from 'clsx';
 import { useCanvasUI } from '@/hooks/useCanvasUI';
@@ -125,7 +128,8 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
     menuZIndices, bringToFront
   } = useCanvasUI(projectId);
 
-  const { theme } = useThemeStore();
+  const { theme, pinnedMinigames } = useThemeStore();
+  const { activeGames, toggleMinimize } = useMinigamesStore();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -398,6 +402,14 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
 
 
 
+      {/* Minigames Overlay */}
+      {activeGames.map(game => {
+        if (game.gameId === 'coin_flip') {
+          return <CoinFlipMinigameHost key={game.id} id={game.id} sessionListeners={sessionListeners} />;
+        }
+        return <ClickerMinigameHost key={game.id} id={game.id} />;
+      })}
+
       {/* Desktop Dock Bar - Bottom Left */}
       <div className="hidden md:flex fixed left-4 bottom-4 z-50 flex-col gap-2">
         {/* Layer Manager Toggle */}
@@ -476,6 +488,64 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
             title="Abrir Assets"
           >
             <LayoutGrid size={20} className={isEthereal ? "" : "text-gray-700 dark:text-neutral-200"} />
+          </button>
+        )}
+
+        {/* Minimized Minigames */}
+        {activeGames.map(game => game.isMinimized && (
+          <button
+            key={game.id}
+            onClick={() => toggleMinimize(game.id)}
+            className={clsx(buttonClass, "relative border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.5)]")}
+            title={`Abrir ${game.title || 'Desafio'}`}
+          >
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+            </span>
+            <Gamepad2 size={20} className={isEthereal ? "text-blue-400" : "text-blue-500"} />
+          </button>
+        ))}
+
+        {/* Add Clicker Minigame Toggle */}
+        {pinnedMinigames?.includes('clicker') && (
+          <button
+            onClick={() => {
+              const newId = `clicker_${Date.now()}`;
+              useMinigamesStore.getState().addGame({
+                id: newId,
+                gameId: 'clicker-game',
+                title: 'Desafio de Cliques',
+                isMinimized: false,
+                status: 'idle',
+                config: { targetClicks: 100, timeLimit: 30 }
+              });
+            }}
+            className={buttonClass}
+            title="Novo Desafio de Cliques"
+          >
+            <MousePointer2 size={20} className={isEthereal ? "" : "text-gray-700 dark:text-neutral-200"} />
+          </button>
+        )}
+
+        {/* Add Coin Flip Toggle */}
+        {pinnedMinigames?.includes('coin_flip') && (
+          <button
+            onClick={() => {
+              const newId = `coin_flip_${Date.now()}`;
+              useMinigamesStore.getState().addGame({
+                id: newId,
+                gameId: 'coin_flip',
+                title: 'Cara ou Coroa',
+                isMinimized: false,
+                status: 'idle',
+                config: { maxFlips: 1, permissions: {} }
+              });
+            }}
+            className={buttonClass}
+            title="Novo Cara ou Coroa"
+          >
+            <Coins size={20} className={isEthereal ? "" : "text-gray-700 dark:text-neutral-200"} />
           </button>
         )}
 

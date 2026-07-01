@@ -87,6 +87,19 @@ interface IDBContextProps {
     updateGlobalTrackPersisted: (track: ActiveGlobalTrack) => void;
     deleteGlobalTrackPersisted: (id: string) => void;
     handleSetActiveGlobalTracks: (tracks: ActiveGlobalTrack[]) => void;
+    isPreviewMode: boolean;
+    startPreview: () => void;
+    commitPreview: () => void;
+    discardPreview: () => void;
+    realActiveAreas: ActiveArea[];
+    realActivePins: ActivePin[];
+    realActiveImages: ActiveImage[];
+    realActiveWalls: ActiveWall[];
+    realActiveGlobalTracks: ActiveGlobalTrack[];
+    realActivePlayers: Players[];
+    realActiveNotes: ActiveNote[];
+    realActiveSoundboardItems: ActiveSoundboardItem[];
+    realActiveLayers: Layer[];
 }
 
 const IndexedDBContext = createContext<IDBContextProps | undefined>(undefined);
@@ -98,16 +111,138 @@ export const IDBProvider = ({ children }: { children: ReactNode }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [savedAudios, setSavedAudios] = useState<Audios[]>([]);
     const [savedImages, setSavedImages] = useState<Images[]>([]);
-    const [activePlayers, setActivePlayers] = useState<Players[]>([]);
-    const [activeImages, setActiveImages] = useState<ActiveImage[]>([]);
-    const [activeAreas, setActiveAreas] = useState<ActiveArea[]>([]);
-    const [activePins, setActivePins] = useState<ActivePin[]>([]);
-    const [activeLayers, setActiveLayers] = useState<Layer[]>([]);
-    const [activeWalls, setActiveWalls] = useState<ActiveWall[]>([]);
+    const [realActivePlayers, setRealActivePlayers] = useState<Players[]>([]);
+    const [realActiveImages, setRealActiveImages] = useState<ActiveImage[]>([]);
+    const [realActiveAreas, setRealActiveAreas] = useState<ActiveArea[]>([]);
+    const [realActivePins, setRealActivePins] = useState<ActivePin[]>([]);
+    const [realActiveLayers, setRealActiveLayers] = useState<Layer[]>([]);
+    const [realActiveWalls, setRealActiveWalls] = useState<ActiveWall[]>([]);
     const [soundboardItems, setSoundboardItems] = useState<SoundboardItem[]>([]);
-    const [activeSoundboardItems, setActiveSoundboardItems] = useState<ActiveSoundboardItem[]>([]);
-    const [activeNotes, setActiveNotes] = useState<ActiveNote[]>([]);
-    const [activeGlobalTracks, setActiveGlobalTracks] = useState<ActiveGlobalTrack[]>([]);
+    const [realActiveSoundboardItems, setRealActiveSoundboardItems] = useState<ActiveSoundboardItem[]>([]);
+    const [realActiveNotes, setRealActiveNotes] = useState<ActiveNote[]>([]);
+    const [realActiveGlobalTracks, setRealActiveGlobalTracks] = useState<ActiveGlobalTrack[]>([]);
+
+    const [isPreviewModeState, setIsPreviewModeState] = useState(false);
+    const isPreviewModeRef = useRef(false);
+
+    const [previewState, setPreviewState] = useState<{
+        activePlayers: Players[];
+        activeImages: ActiveImage[];
+        activeAreas: ActiveArea[];
+        activePins: ActivePin[];
+        activeLayers: Layer[];
+        activeSoundboardItems: ActiveSoundboardItem[];
+        activeNotes: ActiveNote[];
+        activeGlobalTracks: ActiveGlobalTrack[];
+        activeWalls: ActiveWall[];
+    } | null>(null);
+
+    const startPreview = useCallback(() => {
+        setPreviewState({
+            activePlayers: [...realActivePlayers],
+            activeImages: [...realActiveImages],
+            activeAreas: [...realActiveAreas],
+            activePins: [...realActivePins],
+            activeLayers: [...realActiveLayers],
+            activeSoundboardItems: [...realActiveSoundboardItems],
+            activeNotes: [...realActiveNotes],
+            activeGlobalTracks: [...realActiveGlobalTracks],
+            activeWalls: [...realActiveWalls],
+        });
+        setIsPreviewModeState(true);
+        isPreviewModeRef.current = true;
+    }, [realActivePlayers, realActiveImages, realActiveAreas, realActivePins, realActiveLayers, realActiveSoundboardItems, realActiveNotes, realActiveGlobalTracks, realActiveWalls]);
+
+    const discardPreview = useCallback(() => {
+        setIsPreviewModeState(false);
+        isPreviewModeRef.current = false;
+        setPreviewState(null);
+    }, []);
+
+    const commitPreview = useCallback(() => {
+        if (!previewState || !db) return;
+        
+        const transaction = db.transaction(['persistedCanvas'], 'readwrite');
+        const store = transaction.objectStore('persistedCanvas');
+        store.clear();
+
+        const allItems = [
+            ...previewState.activePlayers,
+            ...previewState.activeImages,
+            ...previewState.activeAreas,
+            ...previewState.activePins,
+            ...previewState.activeLayers,
+            ...previewState.activeSoundboardItems,
+            ...previewState.activeNotes,
+            ...previewState.activeGlobalTracks,
+            ...previewState.activeWalls
+        ];
+
+        for (const item of allItems) {
+            store.add(item);
+        }
+
+        setRealActivePlayers(previewState.activePlayers);
+        setRealActiveImages(previewState.activeImages);
+        setRealActiveAreas(previewState.activeAreas);
+        setRealActivePins(previewState.activePins);
+        setRealActiveLayers(previewState.activeLayers);
+        setRealActiveSoundboardItems(previewState.activeSoundboardItems);
+        setRealActiveNotes(previewState.activeNotes);
+        setRealActiveGlobalTracks(previewState.activeGlobalTracks);
+        setRealActiveWalls(previewState.activeWalls);
+
+        setIsPreviewModeState(false);
+        isPreviewModeRef.current = false;
+        setPreviewState(null);
+    }, [previewState, db]);
+
+    const activePlayers = isPreviewModeState && previewState ? previewState.activePlayers : realActivePlayers;
+    const activeImages = isPreviewModeState && previewState ? previewState.activeImages : realActiveImages;
+    const activeAreas = isPreviewModeState && previewState ? previewState.activeAreas : realActiveAreas;
+    const activePins = isPreviewModeState && previewState ? previewState.activePins : realActivePins;
+    const activeLayers = isPreviewModeState && previewState ? previewState.activeLayers : realActiveLayers;
+    const activeWalls = isPreviewModeState && previewState ? previewState.activeWalls : realActiveWalls;
+    const activeSoundboardItems = isPreviewModeState && previewState ? previewState.activeSoundboardItems : realActiveSoundboardItems;
+    const activeNotes = isPreviewModeState && previewState ? previewState.activeNotes : realActiveNotes;
+    const activeGlobalTracks = isPreviewModeState && previewState ? previewState.activeGlobalTracks : realActiveGlobalTracks;
+
+    const setActivePlayers = useCallback((updater: React.SetStateAction<Players[]>) => {
+        if (isPreviewModeRef.current) setPreviewState(prev => prev ? { ...prev, activePlayers: typeof updater === 'function' ? (updater as any)(prev.activePlayers) : updater } : null);
+        else setRealActivePlayers(updater);
+    }, []);
+    const setActiveImages = useCallback((updater: React.SetStateAction<ActiveImage[]>) => {
+        if (isPreviewModeRef.current) setPreviewState(prev => prev ? { ...prev, activeImages: typeof updater === 'function' ? (updater as any)(prev.activeImages) : updater } : null);
+        else setRealActiveImages(updater);
+    }, []);
+    const setActiveAreas = useCallback((updater: React.SetStateAction<ActiveArea[]>) => {
+        if (isPreviewModeRef.current) setPreviewState(prev => prev ? { ...prev, activeAreas: typeof updater === 'function' ? (updater as any)(prev.activeAreas) : updater } : null);
+        else setRealActiveAreas(updater);
+    }, []);
+    const setActivePins = useCallback((updater: React.SetStateAction<ActivePin[]>) => {
+        if (isPreviewModeRef.current) setPreviewState(prev => prev ? { ...prev, activePins: typeof updater === 'function' ? (updater as any)(prev.activePins) : updater } : null);
+        else setRealActivePins(updater);
+    }, []);
+    const setActiveLayers = useCallback((updater: React.SetStateAction<Layer[]>) => {
+        if (isPreviewModeRef.current) setPreviewState(prev => prev ? { ...prev, activeLayers: typeof updater === 'function' ? (updater as any)(prev.activeLayers) : updater } : null);
+        else setRealActiveLayers(updater);
+    }, []);
+    const setActiveWalls = useCallback((updater: React.SetStateAction<ActiveWall[]>) => {
+        if (isPreviewModeRef.current) setPreviewState(prev => prev ? { ...prev, activeWalls: typeof updater === 'function' ? (updater as any)(prev.activeWalls) : updater } : null);
+        else setRealActiveWalls(updater);
+    }, []);
+    const setActiveSoundboardItems = useCallback((updater: React.SetStateAction<ActiveSoundboardItem[]>) => {
+        if (isPreviewModeRef.current) setPreviewState(prev => prev ? { ...prev, activeSoundboardItems: typeof updater === 'function' ? (updater as any)(prev.activeSoundboardItems) : updater } : null);
+        else setRealActiveSoundboardItems(updater);
+    }, []);
+    const setActiveNotes = useCallback((updater: React.SetStateAction<ActiveNote[]>) => {
+        if (isPreviewModeRef.current) setPreviewState(prev => prev ? { ...prev, activeNotes: typeof updater === 'function' ? (updater as any)(prev.activeNotes) : updater } : null);
+        else setRealActiveNotes(updater);
+    }, []);
+    const setActiveGlobalTracks = useCallback((updater: React.SetStateAction<ActiveGlobalTrack[]>) => {
+        if (isPreviewModeRef.current) setPreviewState(prev => prev ? { ...prev, activeGlobalTracks: typeof updater === 'function' ? (updater as any)(prev.activeGlobalTracks) : updater } : null);
+        else setRealActiveGlobalTracks(updater);
+    }, []);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [activeAudios, setActiveAudios] = useState<Audios[]>([]);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -160,6 +295,7 @@ export const IDBProvider = ({ children }: { children: ReactNode }) => {
     }, [db, updateDragLog]);
 
     const updateItemPersisted = useCallback((item: any, type: string) => {
+        if (isPreviewModeRef.current) return;
         pendingUpdatesRef.current.set(item.id, item);
         
         if (flushTimeoutRef.current) clearTimeout(flushTimeoutRef.current);
@@ -167,6 +303,7 @@ export const IDBProvider = ({ children }: { children: ReactNode }) => {
     }, [flushUpdates]);
 
     const deleteItemPersisted = useCallback((id: string) => {
+        if (isPreviewModeRef.current) return;
         if (!db) return;
         const transaction = db.transaction(['persistedCanvas'], 'readwrite');
         const store = transaction.objectStore('persistedCanvas');
@@ -1408,7 +1545,20 @@ export const IDBProvider = ({ children }: { children: ReactNode }) => {
         addWallPersisted,
         updateWallPersisted,
         deleteWallPersisted,
-        handleSetActiveWalls
+        handleSetActiveWalls,
+        isPreviewMode: isPreviewModeState,
+        startPreview,
+        commitPreview,
+        discardPreview,
+        realActiveAreas,
+        realActivePins,
+        realActiveImages,
+        realActiveWalls,
+        realActiveGlobalTracks,
+        realActivePlayers,
+        realActiveNotes,
+        realActiveSoundboardItems,
+        realActiveLayers
     }), [
         db,
         findaudio,
@@ -1478,7 +1628,20 @@ export const IDBProvider = ({ children }: { children: ReactNode }) => {
         addWallPersisted,
         updateWallPersisted,
         deleteWallPersisted,
-        handleSetActiveWalls
+        handleSetActiveWalls,
+        isPreviewModeState,
+        startPreview,
+        commitPreview,
+        discardPreview,
+        realActiveAreas,
+        realActivePins,
+        realActiveImages,
+        realActiveWalls,
+        realActiveGlobalTracks,
+        realActivePlayers,
+        realActiveNotes,
+        realActiveSoundboardItems,
+        realActiveLayers
     ]);
 
     return (
