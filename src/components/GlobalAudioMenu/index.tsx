@@ -15,9 +15,11 @@ interface GlobalAudioMenuProps {
     onInteraction?: () => void;
     zIndex?: number;
     isVisible?: boolean;
+    isPreviewInstance?: boolean;
+    isHiddenReal?: boolean;
 }
 
-export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIndex = 50, isVisible = true }: GlobalAudioMenuProps) {
+export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIndex = 50, isVisible = true, isPreviewInstance, isHiddenReal }: GlobalAudioMenuProps) {
     const { savedAudios, activeGlobalTracks, addGlobalTrackPersisted, updateGlobalTrackPersisted, deleteGlobalTrackPersisted } = useIDB();
     
     // Filter tracks by project. For backward compatibility, also include tracks without a projectId.
@@ -33,7 +35,7 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
     
     const dragControls = useDragControls();
     const menuRef = useRef<HTMLDivElement>(null);
-    const { size, setSize, position, setPosition, onDragEnd, handleResizeStart, constraintRef, x, y } = useViewportResize({
+    const { size, setSize, position, setPosition, onDragEnd, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
         initialSize: { width: 360, height: 400 },
         initialPosition: { x: typeof window !== 'undefined' && window.innerWidth >= 380 ? window.innerWidth - 380 : 20, y: 80 },
         minWidth: 360,
@@ -80,11 +82,11 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
             ref={menuRef}
             layout={false}
             initial={false}
-            animate={{ left: position.x, top: position.y }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
             style={{ x, y,
-                width: size.width,
-                height: size.height,
+                width: width,
+                height: height,
+                left: position.x,
+                top: position.y,
                 maxHeight: '80vh',
                 zIndex: zIndex,
                 visibility: isVisible ? 'visible' : 'hidden',
@@ -97,13 +99,13 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
             dragElastic={0}
             onDragEnd={onDragEnd}
             dragConstraints={constraintRef}
-            className={`absolute flex flex-col bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-gray-200/50 dark:border-white/10 rounded-sm drop-shadow-xl overflow-hidden pointer-events-auto p-5 animate-in fade-in zoom-in-95 duration-200`}
+            className={`absolute flex flex-col bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-2xl shadow-2xl shadow-black/10 overflow-hidden pointer-events-auto p-4 animate-in fade-in zoom-in-95`}
             onContextMenu={(e) => e.preventDefault()}
             onPointerDownCapture={onInteraction}
         >
             <div className={`flex flex-col h-full block`}>
                 <div
-                    className="w-full flex justify-between items-center mb-1 relative flex-shrink-0 touch-none cursor-move"
+                    className="w-full flex justify-between items-center mb-3 relative flex-shrink-0 touch-none cursor-move group/header"
                     onPointerDown={(e) => dragControls.start(e)}
                 >
                     <span className="font-semibold text-gray-700 dark:text-neutral-200 flex items-center gap-2">
@@ -130,7 +132,7 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
                         <GripHorizontal className="text-gray-400" />
                         <button
                             onClick={onClose}
-                            className="p-1 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded text-gray-400 hover:text-red-600 dark:text-neutral-400 dark:hover:text-red-400"
+                            className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
                             onPointerDown={(e) => e.stopPropagation()}
                             title="Fechar"
                         >
@@ -160,7 +162,7 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
                         </div>
                     )}
 
-                    <div className="flex-1 overflow-y-auto p-1 space-y-2">
+                    <div className="flex-1 overflow-y-auto p-1 pr-2 space-y-3 custom-scrollbar">
                         {filteredTracks.length === 0 ? (
                             <div className="text-center text-gray-400 dark:text-neutral-500 text-sm mt-8">
                                 Nenhuma trilha global adicionada.<br/>
@@ -176,7 +178,7 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
                                 }
 
                                 return (
-                                    <div key={track.id} className="group flex flex-col mb-4">
+                                    <div key={track.id} className="group flex flex-col mb-4 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-white/5 shadow-sm transition-all overflow-hidden">
                                         {isMic ? (
                                             <MicPlayerList
                                                 trackId={track.id}
@@ -187,6 +189,7 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
                                                 volume={track.volume}
                                                 isActive={track.isPlaying}
                                                 onPlayStateChange={(playing) => updateGlobalTrackPersisted({ ...track, isPlaying: playing })}
+                                                className="!bg-transparent dark:!bg-transparent !shadow-none !border-none !rounded-none"
                                             />
                                         ) : (
                                             <AudioPlayerList
@@ -208,9 +211,10 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
                                                 onPlayStateChange={(playing) => {
                                                     updateGlobalTrackPersisted({ ...track, isPlaying: playing });
                                                 }}
+                                                className="!bg-transparent dark:!bg-transparent !shadow-none !border-none !rounded-none"
                                             />
                                         )}
-                                        <div className="flex flex-col gap-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-b border-x border-b border-neutral-200 dark:border-neutral-700/50 mt-[-2px]">
+                                        <div className="flex flex-col gap-3 px-3 py-3 border-t border-gray-200/50 dark:border-white/5 bg-transparent transition-all">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-xs font-medium w-20 flex-shrink-0">Pan</span>
                                                 <div className="flex items-center gap-1 w-full text-[10px] text-neutral-500">
@@ -256,8 +260,8 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
                                                     <span className="text-xs font-medium w-16 whitespace-nowrap">
                                                         {(() => {
                                                             const v = track.volume;
-                                                            const db = v <= 0 ? '-∞' : Math.round(20 * Math.log10(v));
-                                                            return `Vol (${db !== '-∞' && db > 0 ? '+' : ''}${db}dB)`;
+                                                            const db = v <= 0 ? '-âˆž' : Math.round(20 * Math.log10(v));
+                                                            return `Vol (${db !== '-âˆž' && db > 0 ? '+' : ''}${db}dB)`;
                                                         })()}
                                                     </span>
                                                     <input
@@ -278,14 +282,11 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
 
                 {/* Resize Handle */}
                 <div
-                    className="absolute bottom-0 right-0 p-1 cursor-nwse-resize hover:bg-neutral-800 rounded-tl z-50 hidden md:block"
-                    onMouseDown={handleResizeStart}
+                    className="absolute bottom-0 right-0 p-2 cursor-nwse-resize text-gray-300 hover:text-gray-500 dark:hover:text-neutral-400 transition-colors touch-none"
+                    onPointerDown={handleResizeStart as any}
+                    title="Redimensionar"
                 >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-500">
-                        <path d="M21 15v6" />
-                        <path d="M15 21h6" />
-                        <path d="M21 3v6" opacity="0" />
-                    </svg>
+                    <svg width="10" height="10" viewBox="0 0 10 10"><path d="M 10 0 L 10 10 L 0 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                 </div>
             </div>
         </motion.div>

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { Eye, EyeOff, GripVertical, ChevronRight, ChevronDown, Folder, Image as ImageIcon, Map, Pin, Box, CornerDownRight, ArrowLeft, Eraser } from 'lucide-react';
 import { Layer } from '@/interfaces/utils/indexedDB';
 import { Reorder, useDragControls, PanInfo } from 'framer-motion';

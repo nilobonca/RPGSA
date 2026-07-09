@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Players, ActiveImage, ActiveArea, ActivePin, Layer, ActiveSoundboardItem, ActiveNote } from '@/interfaces/utils/indexedDB';
+import { formatTimestamp } from '@/utils/time';
 import { X, GripHorizontal } from 'lucide-react';
 import { motion, useDragControls } from 'framer-motion';
 import { useViewportResize } from '@/hooks/useViewportResize';
@@ -29,14 +30,10 @@ interface HistoryMenuProps {
 }
 
 export default function HistoryMenu({ history, future, onRestore, onClose, onInteraction }: HistoryMenuProps) {
-    const formatTime = (timestamp: number) => {
-        return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    };
-
     const dragControls = useDragControls();
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const { size, setSize, position, onDragEnd, handleResizeStart, constraintRef, x, y } = useViewportResize({
+    const { size, setSize, position, onDragEnd, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
         initialSize: { width: 320, height: 500 },
         initialPosition: { x: typeof window !== 'undefined' ? window.innerWidth - 340 : 100, y: 100 },
         minWidth: 280,
@@ -59,8 +56,8 @@ export default function HistoryMenu({ history, future, onRestore, onClose, onInt
             layout={false}
             initial={false}
             style={{ x, y,
-                width: size.width,
-                height: size.height,
+                width,
+                height,
                 maxHeight: '80vh',
                 zIndex: 50
             }}
@@ -105,7 +102,7 @@ export default function HistoryMenu({ history, future, onRestore, onClose, onInt
                                     >
                                         <div className="flex justify-between items-start mb-1">
                                             <span className="font-medium text-gray-700 dark:text-gray-200 text-sm">{entry.description}</span>
-                                            <span className="text-xs text-gray-400 font-mono">{formatTime(entry.timestamp)}</span>
+                                            <span className="text-xs text-gray-400 font-mono">{formatTimestamp(entry.timestamp)}</span>
                                         </div>
                                     </button>
                                 ))}
@@ -136,7 +133,7 @@ export default function HistoryMenu({ history, future, onRestore, onClose, onInt
                                                 <span className={`font-medium text-sm ${i === 0 ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>
                                                     {entry.description}
                                                 </span>
-                                                <span className="text-xs text-gray-400 font-mono">{formatTime(entry.timestamp)}</span>
+                                                <span className="text-xs text-gray-400 font-mono">{formatTimestamp(entry.timestamp)}</span>
                                             </div>
                                             {i === 0 && <span className="text-[10px] text-blue-500 font-semibold uppercase tracking-wider">Atual</span>}
                                         </button>

@@ -1,4 +1,4 @@
-function createFadeBuffer(context: AudioContext, activeTime: number, fadeTime: number): AudioBuffer {
+﻿function createFadeBuffer(context: AudioContext, activeTime: number, fadeTime: number): AudioBuffer {
     const length1 = activeTime * context.sampleRate;
     const length2 = (activeTime - 2 * fadeTime) * context.sampleRate;
     const length = length1 + length2;

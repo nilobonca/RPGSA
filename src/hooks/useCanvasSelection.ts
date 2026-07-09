@@ -1,4 +1,4 @@
-import { useCanvasGlobalStore } from '@/store/canvasStore';
+﻿import { useCanvasGlobalStore } from '@/store/canvasStore';
 
 export const useCanvasSelection = () => {
   const activeAreaIds = useCanvasGlobalStore(state => state.activeAreaIds);

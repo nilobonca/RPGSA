@@ -1,6 +1,7 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { getPolygonCentroid, isPointInPolygon, distanceToSegment, getClosestPointOnSegment } from '@/utils/geometry';
 import { useCanvas } from '../canva-teste';
 import { cn } from '@/lib/utils';
 import { useGesture } from '@use-gesture/react';
@@ -29,26 +30,6 @@ interface EditableAreaProps {
     savedAudios?: Audios[];
 }
 
-// Helpers
-function distToSegment(p: { x: number, y: number }, v: { x: number, y: number }, w: { x: number, y: number }) {
-    const l2 = (v.x - w.x) ** 2 + (v.y - w.y) ** 2;
-    if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
-    let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
-    t = Math.max(0, Math.min(1, t));
-    return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
-}
-
-function getClosestPointOnSegment(p: { x: number, y: number }, a: { x: number, y: number }, b: { x: number, y: number }) {
-    const atob = { x: b.x - a.x, y: b.y - a.y };
-    const atop = { x: p.x - a.x, y: p.y - a.y };
-    const len = atob.x * atob.x + atob.y * atob.y;
-    const dot = atop.x * atob.x + atop.y * atob.y;
-    const t = Math.min(1, Math.max(0, dot / len));
-    return {
-        x: a.x + atob.x * t,
-        y: a.y + atob.y * t
-    };
-}
 
 export default function EditableArea({ area, onUpdate, isSelected, onSelect, onRightClick, isDrawingMode, isActive, onHover, onDrag, onDragStart, isRenaming, onRenameEnd, zIndex, savedAudios = [] }: EditableAreaProps) {
     const { transform } = useCanvas();
@@ -253,7 +234,7 @@ export default function EditableArea({ area, onUpdate, isSelected, onSelect, onR
         for (let i = 0; i < points.length; i++) {
             const p1 = points[i];
             const p2 = points[(i + 1) % points.length];
-            const d = distToSegment(clickP, p1, p2);
+            const d = distanceToSegment(clickP, p1, p2);
 
             if (d < minDist) {
                 minDist = d;
@@ -299,24 +280,6 @@ export default function EditableArea({ area, onUpdate, isSelected, onSelect, onR
         }
     };
 
-    function isPointInPolygon(point: { x: number, y: number }, vs: { x: number, y: number }[]) {
-        const x = point.x, y = point.y;
-        let inside = false;
-        for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-            const xi = vs[i].x, yi = vs[i].y;
-            const xj = vs[j].x, yj = vs[j].y;
-            const intersect = ((yi > y) !== (yj > y))
-                && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-            if (intersect) inside = !inside;
-        }
-        return inside;
-    }
-
-    function getPolygonCentroid(points: { x: number, y: number }[]) {
-        let x = 0, y = 0;
-        points.forEach(p => { x += p.x; y += p.y; });
-        return { x: x / points.length, y: y / points.length };
-    }
 
     const handleNameDoubleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -386,7 +349,7 @@ export default function EditableArea({ area, onUpdate, isSelected, onSelect, onR
         for (let i = 0; i < points.length; i++) {
             const p1 = points[i];
             const p2 = points[(i + 1) % points.length];
-            const d = distToSegment(clickP, p1, p2);
+            const d = distanceToSegment(clickP, p1, p2);
 
             if (d < minDist) {
                 minDist = d;

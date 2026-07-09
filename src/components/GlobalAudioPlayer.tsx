@@ -4,12 +4,13 @@ import { getSharedAudioContext } from '@/utils/audio/audioContext';
 import { ActiveGlobalTrack } from '@/interfaces/utils/indexedDB';
 import { useCanvasGlobalStore } from '@/store/canvasStore';
 import { useThemeStore } from '@/store/themeStore';
-
 interface GlobalAudioPlayerProps {
     activeGlobalTracks: ActiveGlobalTrack[];
+    isPreviewInstance?: boolean;
+    isHiddenReal?: boolean;
 }
 
-export default function GlobalAudioPlayer({ activeGlobalTracks }: GlobalAudioPlayerProps) {
+export default function GlobalAudioPlayer({ activeGlobalTracks, isPreviewInstance, isHiddenReal }: GlobalAudioPlayerProps) {
     const { savedAudios } = useIDB();
     const masterVolume = useCanvasGlobalStore(state => state.masterVolume);
     const audioRefs = useRef<{ [id: string]: HTMLAudioElement }>({});
@@ -30,7 +31,7 @@ export default function GlobalAudioPlayer({ activeGlobalTracks }: GlobalAudioPla
             const arrayBuffer = await file.arrayBuffer();
             const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
             decodedBuffers.current[trackId] = audioBuffer;
-            console.log(`[AudioViz] Decoded buffer for track ${trackId}, duration=${audioBuffer.duration.toFixed(1)}s`);
+
         } catch (e) {
             console.error('[AudioViz] Failed to decode audio buffer:', e);
         }
@@ -118,7 +119,11 @@ export default function GlobalAudioPlayer({ activeGlobalTracks }: GlobalAudioPla
                     }
                     audioElement.volume = 0;
                 } else {
-                    audioElement.volume = Math.max(0, Math.min(1, track.volume * masterVolume));
+                    if (isHiddenReal) {
+                        audioElement.volume = 0;
+                    } else {
+                        audioElement.volume = Math.max(0, Math.min(1, track.volume * masterVolume));
+                    }
                 }
             });
         }, 100);
@@ -139,7 +144,7 @@ export default function GlobalAudioPlayer({ activeGlobalTracks }: GlobalAudioPla
                     if (!audioData) return null;
                     return (
                         <audio
-                            id={`gm-audio-global-${track.id}`}
+                            id={`gm-audio-global-${isPreviewInstance ? 'preview-' : ''}${track.id}`}
                             key={track.id}
                             ref={(el) => {
                                 if (el) {
@@ -155,8 +160,8 @@ export default function GlobalAudioPlayer({ activeGlobalTracks }: GlobalAudioPla
                 })}
             </div>
 
-            {/* Audio pulse overlay — borders glow with music */}
-            {showOverlay && (
+            {/* Audio pulse overlay */}
+            {showOverlay && !isHiddenReal && (
                 <div
                     style={{
                         boxShadow: `inset 0 0 ${blurPx}px ${audioVizColor}${Math.round(parseFloat(alpha) * 255).toString(16).padStart(2, '0')}`,

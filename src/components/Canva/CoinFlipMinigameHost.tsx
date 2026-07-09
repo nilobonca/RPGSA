@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { MinigameWindow } from './MinigameWindow';
 import { useMinigamesStore } from '@/store/minigamesStore';
 import { useThemeStore } from '@/store/themeStore';
@@ -163,23 +163,23 @@ export const CoinFlipMinigameHost: React.FC<{ id: string, sessionListeners: Sess
                         ? "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30" 
                         : "bg-zinc-500/20 text-zinc-300 border border-zinc-500/30"
                     )}>
-                      <span className="text-base">{progress.coinResult === 'heads' ? '👑' : '🪙'}</span>
+                      <span className="text-base">{progress.coinResult === 'heads' ? 'ðŸ‘‘' : 'ðŸª™'}</span>
                       <span>{progress.coinResult === 'heads' ? 'Cara' : 'Coroa'}</span>
                     </div>
                   )}
                   {progress.spinning && !progress.coinResult && (
                     <div className="flex items-center gap-2 mt-1 px-2 py-1.5 rounded text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                      <span className="animate-spin text-base">🪙</span>
+                      <span className="animate-spin text-base">ðŸª™</span>
                       <span>Girando...</span>
                     </div>
                   )}
                   {game.status === 'running' && progress.spinning && !progress.coinResult && (
                     <div className="flex gap-2 mt-2">
                       <button onClick={() => handleForceResult('heads')} className="flex-1 py-1.5 text-xs bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-400 border border-yellow-500/30 rounded transition-colors font-medium">
-                        ⚡ Forçar Cara
+                        âš¡ Forçar Cara
                       </button>
                       <button onClick={() => handleForceResult('tails')} className="flex-1 py-1.5 text-xs bg-zinc-600/20 hover:bg-zinc-600/40 text-zinc-400 border border-zinc-500/30 rounded transition-colors font-medium">
-                        ⚡ Forçar Coroa
+                        âš¡ Forçar Coroa
                       </button>
                     </div>
                   )}

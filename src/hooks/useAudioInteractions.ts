@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useCanvasGlobalStore } from '@/store/canvasStore';
 import { ActivePin, ActiveArea, Audios, ActiveWall, ActiveGlobalTrack } from '@/interfaces/utils/indexedDB';
-import { isPointInPolygon, getPolygonCentroid, doesIntersectWalls } from '@/hooks/useCanvasMath';
+import { isPointInPolygon, getPolygonCentroid, doesIntersectWalls } from '@/utils/geometry';
 import { getSharedAudioContext } from '@/utils/audio/audioContext';
 import { Jungle } from '@/utils/audio/jungle';
 
@@ -11,7 +11,8 @@ export const useAudioInteractions = (
   savedAudios: Audios[],
   getOrCreateListenerGraph: (listenerId: string) => any,
   removeListenerGraph: (listenerId: string) => void,
-  objectUrlsRef: React.MutableRefObject<Map<number, string>>
+  objectUrlsRef: React.MutableRefObject<Map<number, string>>,
+  isPreviewMode: boolean = false
 ) => {
   const setActiveAreaIds = useCanvasGlobalStore(state => state.setActiveAreaIds);
   const setProximityVolumes = useCanvasGlobalStore(state => state.setProximityVolumes);
@@ -30,12 +31,8 @@ export const useAudioInteractions = (
     realWalls: ActiveWall[] = [],
     realGlobalTracks: ActiveGlobalTrack[] = []
   ) => {
-    console.log("[useAudioInteractions] calculateInteractions called!", {
-      isSessionActive,
-      listeners: sessionListeners.length,
-      globalTracks: globalTracks.length,
-      ctxState: getSharedAudioContext()?.state
-    });
+
+
     const newActiveIds = new Set<string>();
     const newProximityVolumes = new Map<number, number>();
     const newActiveAudioIds = new Set<number>();
@@ -116,6 +113,11 @@ export const useAudioInteractions = (
         const graph = getOrCreateListenerGraph(listener.listenerId);
         
         if (!graph) return;
+
+        // Ensure AudioContext is running (might be suspended if created without gesture)
+        if (graph.destination.context.state === 'suspended') {
+            graph.destination.context.resume().catch((e: any) => console.error("Failed to resume listener AudioContext:", e));
+        }
 
         const activeAreaIdsForListener = new Set<string>();
 
@@ -207,7 +209,7 @@ export const useAudioInteractions = (
 
                   const playPromise = audioEl.play();
                   if (playPromise !== undefined) {
-                    playPromise.catch(e => {
+                    playPromise.catch((e: any) => {
                         if (e.name !== 'AbortError') console.error("Error playing listener audio:", e);
                     });
                   }
@@ -231,9 +233,18 @@ export const useAudioInteractions = (
               }
 
               if (src) {
-                src.gainNode.gain.setTargetAtTime(finalVolume, ctx.currentTime, 0.05);
+                src.isPlaying = true; // Ensure it starts playing again if it was paused!
+                if (src.audioElement.paused) {
+                    src.audioElement.play().catch((e: any) => {
+                        if (e.name !== 'AbortError') console.error("Error resuming:", e);
+                    });
+                }
+                // Avoid redundant setTargetAtTime calls to prevent clicking/stuttering
+                if (Math.abs(src.gainNode.gain.value - finalVolume) > 0.01) {
+                  src.gainNode.gain.setTargetAtTime(finalVolume, ctx.currentTime, 0.05);
+                }
                 
-                if (src.pannerNode) {
+                if (src.pannerNode && Math.abs(src.pannerNode.pan.value - pan) > 0.01) {
                   src.pannerNode.pan.setTargetAtTime(pan, ctx.currentTime, 0.1);
                 }
                 
@@ -243,33 +254,20 @@ export const useAudioInteractions = (
 
                 if (filterType === 'telephone') {
                   filter.type = 'bandpass';
-                  filter.frequency.setTargetAtTime(1500, ctx.currentTime, 0.05);
+                  if (Math.abs(filter.frequency.value - 1500) > 1) filter.frequency.setTargetAtTime(1500, ctx.currentTime, 0.05);
                 } else if (filterType === 'wall') {
                   filter.type = 'lowpass';
-                  filter.frequency.setTargetAtTime(450, ctx.currentTime, 0.05);
+                  if (Math.abs(filter.frequency.value - 450) > 1) filter.frequency.setTargetAtTime(450, ctx.currentTime, 0.05);
                 } else if (filterType === 'lowpass') {
                   filter.type = 'lowpass';
-                  filter.frequency.setTargetAtTime(1000, ctx.currentTime, 0.05);
+                  if (Math.abs(filter.frequency.value - 1000) > 1) filter.frequency.setTargetAtTime(1000, ctx.currentTime, 0.05);
                 } else {
                   filter.type = 'lowpass';
-                  filter.frequency.setTargetAtTime(20000, ctx.currentTime, 0.1);
+                  if (Math.abs(filter.frequency.value - 20000) > 1) filter.frequency.setTargetAtTime(20000, ctx.currentTime, 0.1);
                 }
 
                 if (src.jungle) {
                   src.jungle.setPitchOffset(pitch - 1.0);
-                }
-
-                // CONTINUOUS SYNC: If host scrubbed the audio, sync the virtual source node
-                const gmAudioEl = document.getElementById(`gm-audio-${area.id}`) as HTMLAudioElement;
-                if (gmAudioEl) {
-                    if (Math.abs(src.audioElement.currentTime - gmAudioEl.currentTime) > 0.3) {
-                        src.audioElement.currentTime = gmAudioEl.currentTime;
-                    }
-                    if (gmAudioEl.paused && !src.audioElement.paused) {
-                        src.audioElement.pause();
-                    } else if (!gmAudioEl.paused && src.audioElement.paused) {
-                        src.audioElement.play().catch((e: any) => console.error(e));
-                    }
                 }
               }
             }
@@ -321,7 +319,7 @@ export const useAudioInteractions = (
 
                   const playPromise = audioEl.play();
                   if (playPromise !== undefined) {
-                    playPromise.catch(e => {
+                    playPromise.catch((e: any) => {
                         if (e.name !== 'AbortError') console.error("Error playing global track listener audio:", e);
                     });
                   }
@@ -346,7 +344,9 @@ export const useAudioInteractions = (
 
               if (src) {
                 src.isPlaying = track.isPlaying;
-                src.gainNode.gain.setTargetAtTime(track.volume, ctx.currentTime, 0.05);
+                if (Math.abs(src.gainNode.gain.value - track.volume) > 0.01) {
+                  src.gainNode.gain.setTargetAtTime(track.volume, ctx.currentTime, 0.05);
+                }
               }
             }
           }

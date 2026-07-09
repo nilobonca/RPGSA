@@ -1,5 +1,5 @@
-import React, { ReactNode } from 'react';
-import { motion } from 'framer-motion';
+﻿import React, { ReactNode } from 'react';
+import { motion, useDragControls } from 'framer-motion';
 import { X, Minus } from 'lucide-react';
 import clsx from 'clsx';
 import { useThemeStore } from '@/store/themeStore';
@@ -15,6 +15,7 @@ export const MinigameWindow: React.FC<MinigameWindowProps> = ({ id, title, child
   const { theme } = useThemeStore();
   const { toggleMinimize, removeGame, activeGames } = useMinigamesStore();
   const game = activeGames.find(g => g.id === id);
+  const dragControls = useDragControls();
 
   if (!game || game.isMinimized) return null;
 
@@ -22,7 +23,8 @@ export const MinigameWindow: React.FC<MinigameWindowProps> = ({ id, title, child
     <motion.div
       drag
       dragMomentum={false}
-      dragHandle=".drag-handle"
+      dragControls={dragControls}
+      dragListener={false}
       initial={{ x: window.innerWidth / 2 - 150, y: window.innerHeight / 2 - 100 }}
       style={{ position: 'fixed', zIndex: 1000 }}
       className={clsx(
@@ -34,11 +36,14 @@ export const MinigameWindow: React.FC<MinigameWindowProps> = ({ id, title, child
       )}
     >
       {/* Title bar */}
-      <div className={clsx(
-        "drag-handle flex items-center justify-between p-3 border-b cursor-grab active:cursor-grabbing",
-        theme === 'ethereal' ? "border-white/10 bg-white/5" : "border-neutral-800 bg-neutral-950"
-      )}>
-        <span className={clsx("font-medium select-none text-sm", theme === 'ethereal' ? "text-white" : "text-neutral-200")}>
+      <div 
+        onPointerDown={(e) => dragControls.start(e)}
+        className={clsx(
+          "flex items-center justify-between p-3 border-b cursor-grab active:cursor-grabbing",
+          theme === 'ethereal' ? "border-white/10 bg-white/5" : "border-neutral-800 bg-neutral-950"
+        )}
+      >
+        <span className={clsx("font-medium select-none text-sm pointer-events-none", theme === 'ethereal' ? "text-white" : "text-neutral-200")}>
           {title}
         </span>
         <div className="flex items-center gap-2">

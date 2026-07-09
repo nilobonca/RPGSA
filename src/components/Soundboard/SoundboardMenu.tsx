@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useIDB } from '@/utils/indexedDB';
 import { SoundboardButton } from './SoundboardButton';
 import ContextMenu from '@/components/ContextMenu';
@@ -63,8 +63,8 @@ export const SoundboardMenu: React.FC<SoundboardMenuProps> = ({ onItemContextMen
         >
             {soundboardItems.length === 0 && (
                 <div className="col-span-full flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 py-8">
-                    <p className="text-sm mb-2">Soundboard vazio</p>
-                    <p className="text-xs text-center">Arraste áudios para cá ou clique em +</p>
+                    <p className="text-sm font-medium mb-1">Soundboard vazio</p>
+                    <p className="text-[11px] opacity-70 text-center">Arraste áudios para cá ou clique em +</p>
                 </div>
             )}
 
@@ -100,10 +100,11 @@ export const SoundboardMenu: React.FC<SoundboardMenuProps> = ({ onItemContextMen
 
             <button
                 onClick={handleAddButton}
-                className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-neutral-600 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors"
+                className="w-28 h-28 rounded-2xl border-2 border-dashed border-gray-300/50 dark:border-neutral-600/50 flex flex-col items-center justify-center text-gray-400 hover:text-blue-500 hover:border-blue-400/50 hover:bg-white/50 dark:hover:bg-neutral-800/50 hover:shadow-lg transition-all duration-300 backdrop-blur-sm"
                 title="Adicionar Botão"
             >
-                <Plus size={24} />
+                <Plus size={24} className="mb-2 transition-transform duration-300 group-hover:scale-110" />
+                <span className="text-[10px] font-medium opacity-70">Novo Botão</span>
             </button>
 
             {contextMenu && (
@@ -114,7 +115,7 @@ export const SoundboardMenu: React.FC<SoundboardMenuProps> = ({ onItemContextMen
                     options={[
                         {
                             label: 'Renomear',
-                            icon: '✏️',
+                            icon: 'âœï¸',
                             onClick: () => {
                                 const newName = window.prompt('Novo nome:', contextMenu.item.name);
                                 if (newName) {
@@ -125,7 +126,7 @@ export const SoundboardMenu: React.FC<SoundboardMenuProps> = ({ onItemContextMen
                         },
                         {
                             label: contextMenu.item.playbackMode === 'restart' ? 'Modo: Reiniciar' : 'Modo: Sobrepor',
-                            icon: contextMenu.item.playbackMode === 'restart' ? '🔄' : '▶️',
+                            icon: contextMenu.item.playbackMode === 'restart' ? 'ðŸ”„' : 'â–¶ï¸',
                             onClick: () => {
                                 const newMode = contextMenu.item.playbackMode === 'restart' ? 'overlap' : 'restart';
                                 updateSoundboardItem({ ...contextMenu.item, playbackMode: newMode });
@@ -134,7 +135,7 @@ export const SoundboardMenu: React.FC<SoundboardMenuProps> = ({ onItemContextMen
                         },
                         {
                             label: 'Excluir',
-                            icon: '🗑️',
+                            icon: 'ðŸ—‘️',
                             onClick: () => {
                                 if (window.confirm('Excluir botão?')) {
                                     stopSoundboardAudio(contextMenu.item.id);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useThemeStore } from '@/store/themeStore';
 import { X, Download, Trash2 } from 'lucide-react';
 import clsx from 'clsx';

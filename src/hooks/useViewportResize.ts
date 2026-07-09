@@ -28,8 +28,14 @@ export const useViewportResize = ({ initialSize, initialPosition, minWidth, minH
     const [isMounted, setIsMounted] = useState(false);
     const x = useMotionValue(0);
     const y = useMotionValue(0);
+    const width = useMotionValue(initialSize.width);
+    const height = useMotionValue(initialSize.height);
 
-
+    // Sync MotionValues if initialSize or external size change happens
+    useEffect(() => {
+        width.set(size.width);
+        height.set(size.height);
+    }, [size.width, size.height, width, height]);
 
     // Refs to always have latest values inside event handlers
     const sizeRef = useRef(size);
@@ -120,8 +126,8 @@ export const useViewportResize = ({ initialSize, initialPosition, minWidth, minH
         y.set(0);
     };
 
-    // Centralised resize handler — enforces minWidth/minHeight AND viewport bounds
-    const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    // Centralised resize handler â€” enforces minWidth/minHeight AND viewport bounds
+    const handleResizeStart = useCallback((e: React.PointerEvent | React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         const startX = e.clientX;
@@ -129,29 +135,35 @@ export const useViewportResize = ({ initialSize, initialPosition, minWidth, minH
         const startWidth = sizeRef.current.width;
         const startHeight = sizeRef.current.height;
 
-        const handleMouseMove = (moveEvent: MouseEvent) => {
-            requestAnimationFrame(() => {
+        let rAF: number;
+        const handlePointerMove = (moveEvent: PointerEvent | MouseEvent) => {
+            if (rAF) cancelAnimationFrame(rAF);
+            rAF = requestAnimationFrame(() => {
                 const pos = positionRef.current;
-                const maxWidth = typeof window !== 'undefined'
-                    ? window.innerWidth - pos.x - margin
-                    : Infinity;
-                const maxHeight = typeof window !== 'undefined'
-                    ? window.innerHeight - pos.y - margin
-                    : Infinity;
-                setSize({
-                    width: Math.min(maxWidth, Math.max(minWidth, startWidth + (moveEvent.clientX - startX))),
-                    height: Math.min(maxHeight, Math.max(minHeight, startHeight + (moveEvent.clientY - startY))),
-                });
+                const maxWidth = typeof window !== 'undefined' ? window.innerWidth - pos.x - margin : Infinity;
+                const maxHeight = typeof window !== 'undefined' ? window.innerHeight - pos.y - margin : Infinity;
+                const newWidth = Math.min(maxWidth, Math.max(minWidth, startWidth + (moveEvent.clientX - startX)));
+                const newHeight = Math.min(maxHeight, Math.max(minHeight, startHeight + (moveEvent.clientY - startY)));
+                
+                width.set(newWidth);
+                height.set(newHeight);
             });
         };
 
-        const handleMouseUp = () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
+        const handlePointerUp = () => {
+            if (rAF) cancelAnimationFrame(rAF);
+            // Commit final size to React state on drag end
+            setSize({ width: width.get(), height: height.get() });
+            document.removeEventListener('pointermove', handlePointerMove as any);
+            document.removeEventListener('pointerup', handlePointerUp);
+            document.removeEventListener('mousemove', handlePointerMove as any);
+            document.removeEventListener('mouseup', handlePointerUp);
         };
 
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('pointermove', handlePointerMove as any);
+        document.addEventListener('pointerup', handlePointerUp);
+        document.addEventListener('mousemove', handlePointerMove as any);
+        document.addEventListener('mouseup', handlePointerUp);
     }, [margin, minWidth, minHeight]);
 
     // Calculate exact constraints based on current position and size
@@ -162,5 +174,5 @@ export const useViewportResize = ({ initialSize, initialPosition, minWidth, minH
         bottom: typeof window !== 'undefined' ? window.innerHeight - size.height - margin - position.y : 0
     };
 
-    return { size, setSize, position, setPosition, onDragEnd, isDesktop, handleResizeStart, constraintRef, x, y };
+    return { size, setSize, position, setPosition, onDragEnd, isDesktop, handleResizeStart, constraintRef, x, y, width, height };
 };

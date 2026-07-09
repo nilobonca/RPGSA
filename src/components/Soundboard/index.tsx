@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { X, GripHorizontal } from 'lucide-react';
 import { useViewportResize } from '@/hooks/useViewportResize';
@@ -15,7 +15,7 @@ interface SoundboardProps {
 export default function Soundboard({ onInteraction, onClose, onItemContextMenu, editingItemId, onRename }: SoundboardProps) {
     const dragControls = useDragControls();
 
-    const { size, setSize, position, onDragEnd, handleResizeStart, constraintRef, x, y } = useViewportResize({
+    const { size, setSize, position, onDragEnd, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
         initialSize: { width: 320, height: 400 },
         initialPosition: { x: typeof window !== 'undefined' ? window.innerWidth - 340 : 800, y: 100 },
         minWidth: 280,
@@ -32,8 +32,8 @@ export default function Soundboard({ onInteraction, onClose, onItemContextMenu, 
             layout={false}
             initial={false}
             style={{ x, y,
-                width: size.width,
-                height: size.height,
+                width: width,
+                height: height,
                 maxHeight: '80vh',
                 left: position.x,
                 top: position.y,
@@ -46,13 +46,13 @@ export default function Soundboard({ onInteraction, onClose, onItemContextMenu, 
             dragElastic={0}
             onDragEnd={onDragEnd}
             dragConstraints={constraintRef}
-            className={`absolute flex flex-col bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-gray-200/50 dark:border-white/10 rounded-sm drop-shadow-xl overflow-hidden pointer-events-auto p-5 animate-in fade-in zoom-in-95 duration-200`}
+            className={`absolute flex flex-col bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-2xl shadow-2xl shadow-black/10 overflow-hidden pointer-events-auto p-4 animate-in fade-in zoom-in-95`}
             onContextMenu={(e) => e.preventDefault()}
             onPointerDownCapture={onInteraction}
         >
             <div className={`flex flex-col h-full block`}>
                 <div
-                    className="w-full flex justify-between items-center mb-2 relative flex-shrink-0 touch-none cursor-move"
+                    className="w-full flex justify-between items-center mb-3 relative flex-shrink-0 touch-none cursor-move group/header"
                     onPointerDown={(e) => dragControls.start(e)}
                 >
                     <span className="font-semibold text-gray-700 dark:text-neutral-200">Soundboard</span>
@@ -62,7 +62,7 @@ export default function Soundboard({ onInteraction, onClose, onItemContextMenu, 
                         {onClose && (
                             <button
                                 onClick={onClose}
-                                className="p-1 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded text-gray-400 hover:text-red-600 dark:text-neutral-400 dark:hover:text-red-400"
+                                className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
                                 onPointerDown={(e) => e.stopPropagation()}
                                 title="Fechar"
                             >
@@ -78,9 +78,8 @@ export default function Soundboard({ onInteraction, onClose, onItemContextMenu, 
             </div>
             {/* Resize handle */}
             <div
-                className="absolute bottom-0 right-0 p-1.5 cursor-nwse-resize text-gray-300 hover:text-gray-500 dark:hover:text-neutral-400 transition-colors"
-                onMouseDown={handleResizeStart}
-                onPointerDown={(e) => e.stopPropagation()}
+                className="absolute bottom-0 right-0 p-2 cursor-nwse-resize text-gray-300 hover:text-gray-500 dark:hover:text-neutral-400 transition-colors touch-none"
+                onPointerDown={handleResizeStart as any}
                 title="Redimensionar"
             >
                 <svg width="10" height="10" viewBox="0 0 10 10"><path d="M 10 0 L 10 10 L 0 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>

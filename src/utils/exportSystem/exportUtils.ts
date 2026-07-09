@@ -94,7 +94,7 @@ export const exportAllProjects = async (onProgress?: (progress: number) => void)
         }
       }
     }
-    exportData.chatHistory = chatHistory;
+    (exportData as Record<string, any>).chatHistory = chatHistory;
 
     zip.file("data.json", JSON.stringify(exportData, null, 2));
 

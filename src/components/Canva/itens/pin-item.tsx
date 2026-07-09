@@ -1,4 +1,4 @@
-import { ActivePin } from '@/interfaces/utils/indexedDB';
+﻿import { ActivePin } from '@/interfaces/utils/indexedDB';
 import { MapPin, User, Ear } from 'lucide-react';
 
 interface PinItemProps {

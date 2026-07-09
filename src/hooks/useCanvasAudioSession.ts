@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+﻿import { useState, useRef, useEffect, useCallback } from 'react';
 import { ActivePin, Audios } from '@/interfaces/utils/indexedDB';
 import { Jungle } from '@/utils/audio/jungle';
 import { getSharedAudioContext } from '@/utils/audio/audioContext';
@@ -136,7 +136,7 @@ export const useCanvasAudioSession = (
       try {
         const Peer = (await import('peerjs')).default;
         const gmPeerId = `visual-sound-design-${projectId}`;
-        console.log(`[DEBUG] Initializing PeerJS Host with ID: ${gmPeerId}`);
+
 
         const peer = new Peer(gmPeerId, {
           debug: 1
@@ -144,7 +144,7 @@ export const useCanvasAudioSession = (
         peerRef.current = peer;
 
         peer.on('open', (id) => {
-          console.log(`[DEBUG] PeerJS Host opened: ${id}`);
+
           isChannelSubscribedRef.current = true;
         });
 
@@ -154,14 +154,14 @@ export const useCanvasAudioSession = (
         });
 
         peer.on('close', () => {
-          console.log('[DEBUG] PeerJS Host closed');
+
           isChannelSubscribedRef.current = false;
         });
 
         peer.on('connection', (conn) => {
           const listenerId = conn.peer;
           const name = (conn.metadata as any)?.name || 'Ouvinte Anônimo';
-          console.log(`[DEBUG] P2P Connection from: ${name} (${listenerId})`);
+
 
           connectionsRef.current[listenerId] = conn;
 
@@ -177,7 +177,7 @@ export const useCanvasAudioSession = (
               ctx.resume().then(() => {
                 const graph = getOrCreateListenerGraph(listenerId);
                 if (graph && graph.destination instanceof MediaStreamAudioDestinationNode && peerRef.current) {
-                  console.log(`[DEBUG] Calling listener peer with media stream: ${listenerId}`);
+
                   const call = peerRef.current.call(listenerId, graph.destination.stream);
                   graph.call = call;
                 }
@@ -201,7 +201,7 @@ export const useCanvasAudioSession = (
           });
 
           conn.on('close', () => {
-            console.log(`[DEBUG] Connection closed: ${name}`);
+
             delete connectionsRef.current[listenerId];
             removeListenerGraph(listenerId);
             setSessionListeners(prev => prev.filter(l => l.listenerId !== listenerId));

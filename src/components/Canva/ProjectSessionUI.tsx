@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Users, X, Check, MessageSquare, Dices, Power } from 'lucide-react';
 
 interface ProjectSessionUIProps {

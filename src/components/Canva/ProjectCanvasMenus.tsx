@@ -6,6 +6,7 @@ import {
 import { useMinigamesStore } from '@/store/minigamesStore';
 import { ClickerMinigameHost } from './ClickerMinigameHost';
 import { CoinFlipMinigameHost } from './CoinFlipMinigameHost';
+import { CardsMinigameHost } from './CardsMinigameHost';
 import { useThemeStore } from '@/store/themeStore';
 import clsx from 'clsx';
 import { useCanvasUI } from '@/hooks/useCanvasUI';
@@ -94,6 +95,8 @@ interface ProjectCanvasMenusProps {
   deletePlayer: (id: string) => void;
   deleteArea: (id: string) => void;
   handleUpdateArea: (area: ActiveArea) => void;
+  handleLocatePlayer: (x: number, y: number) => void;
+  isPreviewMode?: boolean;
 }
 
 export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
@@ -110,7 +113,9 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
   activePlayers, activeAreas, activeAreaIds, spatialPans,
   spatial3D,
   is3DEnabled, audioFilters, deletePlayer, deleteArea, handleUpdateArea,
-  tool, setTool
+  handleLocatePlayer,
+  tool, setTool,
+  isPreviewMode
 }) => {
   const router = useRouter();
   
@@ -267,13 +272,18 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
             onUpdate={updatePinPersisted}
             onDelete={deletePinPersisted}
             onClose={() => setPinManagerOpen(false)}
+            onInteraction={() => bringToFront('pin')}
           />
         </div>
       )}
 
       {/* History Menu - Floating */}
       {historyOpen && (
-        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 50 }}>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: menuZIndices.history }}
+          onMouseDown={() => bringToFront('history')}
+        >
           <HistoryMenu
             history={history}
             future={future}
@@ -281,6 +291,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
             onRedo={handleRedo}
             onClose={() => setHistoryOpen(false)}
             onRestore={handleRestoreHistory}
+            onInteraction={() => bringToFront('history')}
           />
         </div>
       )}
@@ -289,13 +300,17 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
 
       {/* Listeners Menu - Floating */}
       {listenersOpen && isSessionActive && (
-        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 65 }}>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: menuZIndices.listeners }}
+          onMouseDown={() => bringToFront('listeners')}
+        >
           <ListenersMenu
             listeners={sessionListeners.map(l => ({ ...l, ping: listenerPings[l.listenerId] ?? null }))}
             onClose={() => setListenersOpen(false)}
             onLocateListener={handleLocateListener}
             onKickListener={handleKickListener}
-            onInteraction={() => bringToFront('header')}
+            onInteraction={() => bringToFront('listeners')}
           />
         </div>
       )}
@@ -331,7 +346,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
                 screenY: e.clientY,
                 worldX: 0,
                 worldY: 0,
-                type: type === 'audio' ? 'asset-audio' : 'asset-image',
+                type: type === 'audio' ? 'asset-audio' : type === 'image' ? 'asset-image' : 'asset-folder',
                 itemId: id.toString()
               });
             }}
@@ -341,7 +356,11 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
 
       {/* Soundboard - Floating */}
       {soundboardOpen && (
-        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 50 }}>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: menuZIndices.soundboard }}
+          onMouseDown={() => bringToFront('soundboard')}
+        >
           <Soundboard
             onClose={() => setSoundboardOpen(false)}
             onItemContextMenu={(e, itemId) => {
@@ -358,6 +377,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
             }}
             editingItemId={editingSoundboardItemId}
             onRename={handleRenameSoundboardItem}
+            onInteraction={() => bringToFront('soundboard')}
           />
         </div>
       )}
@@ -369,12 +389,14 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
           onInteraction={() => bringToFront('globalTracks')}
           zIndex={menuZIndices.globalTracks || 50}
           isVisible={globalTracksOpen}
+          isPreviewInstance={isPreviewMode}
       />
 
       {/* Active Players Menu - Floating (Always mounted to persist audio) */}
       <div
         className={`absolute inset-0 pointer-events-none ${activePlayersOpen ? '' : 'invisible'}`}
-        style={{ zIndex: 60 }} // High z-index
+        style={{ zIndex: menuZIndices.activePlayers }}
+        onMouseDown={() => bringToFront('activePlayers')}
       >
         <ActivePlayersMenu
           activePlayers={activePlayers}
@@ -388,15 +410,16 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
             is3DEnabled={is3DEnabled}
           audioFilters={audioFilters}
           onClose={() => setActivePlayersOpen(false)}
-          onInteraction={() => bringToFront('header')}
-          onLocatePlayer={() => {
-            // Implement locate logic if needed
+          onInteraction={() => bringToFront('activePlayers')}
+          onLocatePlayer={(x, y) => {
+            handleLocatePlayer(x, y);
           }}
           onDeletePlayer={(id, type) => {
             if (type === 'player') deletePlayer(id);
             else if (type === 'area') deleteArea(id);
           }}
           onUpdateArea={handleUpdateArea}
+          isPreviewInstance={isPreviewMode}
         />
       </div>
 
@@ -406,6 +429,8 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
       {activeGames.map(game => {
         if (game.gameId === 'coin_flip') {
           return <CoinFlipMinigameHost key={game.id} id={game.id} sessionListeners={sessionListeners} />;
+        } else if (game.gameId === 'cards') {
+          return <CardsMinigameHost key={game.id} id={game.id} sessionListeners={sessionListeners} />;
         }
         return <ClickerMinigameHost key={game.id} id={game.id} />;
       })}
@@ -546,6 +571,27 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
             title="Novo Cara ou Coroa"
           >
             <Coins size={20} className={isEthereal ? "" : "text-gray-700 dark:text-neutral-200"} />
+          </button>
+        )}
+
+        {/* Add Cards Toggle */}
+        {pinnedMinigames?.includes('cards') && (
+          <button
+            onClick={() => {
+              const newId = `cards_${Date.now()}`;
+              useMinigamesStore.getState().addGame({
+                id: newId,
+                gameId: 'cards',
+                title: 'Escolha uma Carta',
+                isMinimized: false,
+                status: 'idle',
+                config: { permissions: {} }
+              });
+            }}
+            className={buttonClass}
+            title="Novo Jogo de Cartas"
+          >
+            <Gamepad2 size={20} className={isEthereal ? "" : "text-gray-700 dark:text-neutral-200"} />
           </button>
         )}
 

@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { PlayIcon, PauseIcon, Copy, SquareX, Repeat, Volume2, VolumeX, Filter } from 'lucide-react';
-import { useTracking } from '@/contexts/TrackingContext';
 import { Audios } from "@/interfaces/utils/indexedDB";
 
 import { getSharedAudioContext, resumeAudioContext } from "@/utils/audio/audioContext";
 import { Jungle } from "@/utils/audio/jungle";
 import { useCanvasGlobalStore } from '@/store/canvasStore';
+import { formatDuration } from "@/utils/time";
 
 interface AudioPlayerListProps {
     playerId?: string;
@@ -28,6 +28,9 @@ interface AudioPlayerListProps {
     onRotationChange?: (rotation: number) => void;
     onFilterChange?: (filter: 'none' | 'lowpass' | 'wall' | 'telephone') => void;
     onPlayStateChange?: (playing: boolean) => void;
+    className?: string;
+    isPreviewInstance?: boolean;
+    isHiddenReal?: boolean;
 }
 
 const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
@@ -48,7 +51,10 @@ const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
     audioRotation = 0,
     onRotationChange,
     onFilterChange,
-    onPlayStateChange
+    onPlayStateChange,
+    className,
+    isPreviewInstance,
+    isHiddenReal
 }) => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const pannerNodeRef = useRef<StereoPannerNode | PannerNode | null>(null);
@@ -76,12 +82,7 @@ const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
         setLocalRotation(audioRotation); }, [volume]);
     useEffect(() => { setLocalPitch(pitch); }, [pitch]);
 
-    const formatTime = (seconds: number) => {
-        if (isNaN(seconds)) return '00:00';
-        const minutes = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    };
+
 
     const updateLoopRangeVisual = useCallback(() => {
         setLoopUi({ start: loopStartTimeRef.current, end: loopEndTimeRef.current });
@@ -132,6 +133,8 @@ const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
 
     // Connect HTMLAudioElement to Web Audio API StereoPannerNode once
     useEffect(() => {
+        if (isHiddenReal) return;
+        
         const audioElement = audioRef.current;
         if (!audioElement) return;
 
@@ -301,7 +304,6 @@ const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
         }
     }, [localPitch, audio.url]);
 
-    const { trackEvent } = useTracking();
 
     const handlePlayPause = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -317,10 +319,7 @@ const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
                     if (onPlayStateChange) onPlayStateChange(true);
                 }).catch(e => console.error("Error playing audio:", e));
             }
-            trackEvent('audio_play', {
-                file_name: audio.name,
-                duration: duration
-            });
+
         }
     };
 
@@ -357,11 +356,34 @@ const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
 
     const isHighlighted = highlightedAudioId === audio.id;
 
+    if (isHiddenReal) {
+        return (
+            <audio
+                id={`gm-audio-${playerId || audio.id}`}
+                muted={true}
+                ref={audioRef}
+                src={audio.url}
+                onTimeUpdate={handleTimeUpdate}
+                onLoadedMetadata={handleLoadedMetadata}
+                onEnded={() => {
+                    if (isCustomLooping) {
+                        if (audioRef.current) {
+                            audioRef.current.currentTime = loopStartTimeRef.current;
+                            audioRef.current.play();
+                        }
+                    } else {
+                        setIsPlaying(false);
+                    }
+                }}
+            />
+        );
+    }
+
     return (
         <div
             draggable={!!onDragStart}
             onDragStart={onDragStart}
-            className={`bg-white dark:bg-neutral-800 rounded shadow-sm p-2 animate-fade-in border transition-all duration-300 ${isHighlighted ? 'border-blue-500 ring-2 ring-blue-500/20 dark:ring-blue-500/30 z-10 scale-[1.02]' : 'border-transparent dark:border-neutral-700'}`}
+            className={`bg-white dark:bg-neutral-800 rounded shadow-sm p-2 animate-fade-in transition-all duration-300 ${isHighlighted ? 'border-blue-500 ring-2 ring-blue-500/20 dark:ring-blue-500/30 z-10 scale-[1.02]' : ''} ${className || 'border border-transparent dark:border-neutral-700'}`}
         >
             <div className="flex items-center gap-2">
                 {/* Play/Pause Button */}
@@ -384,7 +406,7 @@ const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
                             {audio.name}
                         </p>
                         <span className="text-[10px] text-gray-400 dark:text-neutral-400 ml-2">
-                            {formatTime(currentTime)} / {formatTime(duration)}
+                            {formatDuration(currentTime)} / {formatDuration(duration)}
                         </span>
                     </div>
 
@@ -426,7 +448,7 @@ const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
 
                     {isCustomLooping && (
                         <div className="text-[9px] text-gray-500 dark:text-neutral-400 mt-0.5">
-                            Loop: {formatTime(loopUi.start)} - {formatTime(loopUi.end)}
+                            Loop: {formatDuration(loopUi.start)} - {formatDuration(loopUi.end)}
                         </div>
                     )}
                 </div>
@@ -497,8 +519,8 @@ const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
                         <span className="text-[10px] text-gray-500 dark:text-neutral-400 font-semibold select-none w-14 whitespace-nowrap">
                             {(() => {
                                 const v = isMuted ? 0 : localVolume;
-                                const db = v <= 0 ? '-∞' : Math.round(20 * Math.log10(v));
-                                return `Vol (${db !== '-∞' && db > 0 ? '+' : ''}${db}dB)`;
+                                const db = v <= 0 ? '-âˆž' : Math.round(20 * Math.log10(v));
+                                return `Vol (${db !== '-âˆž' && db > 0 ? '+' : ''}${db}dB)`;
                             })()}
                         </span>
                         <input
@@ -603,7 +625,8 @@ const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
             </div>
 
             <audio
-                id={`gm-audio-${playerId || audio.id}`}
+                id={`gm-audio-${isPreviewInstance ? 'preview-' : ''}${playerId || audio.id}`}
+                muted={isHiddenReal}
                 ref={audioRef}
                 src={audio.url}
                 onTimeUpdate={handleTimeUpdate}

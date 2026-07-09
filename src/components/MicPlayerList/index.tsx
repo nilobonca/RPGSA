@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+﻿import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Mic, MicOff, Trash2, Sliders, Settings } from 'lucide-react';
 import { getSharedAudioContext, resumeAudioContext } from "@/utils/audio/audioContext";
 import { useCanvasGlobalStore } from '@/store/canvasStore';
@@ -16,6 +16,7 @@ interface MicPlayerListProps {
     onFilterChange?: (filter: 'none' | 'lowpass' | 'wall' | 'telephone') => void;
     onPlayStateChange?: (playing: boolean) => void;
     isActive: boolean; // mapped to track.isPlaying
+    className?: string;
 }
 
 const MicPlayerList: React.FC<MicPlayerListProps> = ({
@@ -29,7 +30,8 @@ const MicPlayerList: React.FC<MicPlayerListProps> = ({
     onPitchChange,
     onFilterChange,
     onPlayStateChange,
-    isActive
+    isActive,
+    className
 }) => {
     const streamRef = useRef<MediaStream | null>(null);
     const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -240,7 +242,7 @@ const MicPlayerList: React.FC<MicPlayerListProps> = ({
     };
 
     return (
-        <div className="flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded shadow-sm border border-neutral-200 dark:border-neutral-700/50 relative overflow-hidden group">
+        <div className={`flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded shadow-sm border border-neutral-200 dark:border-neutral-700/50 relative overflow-hidden group ${className || ''}`}>
             <div className="flex items-center justify-between p-2">
                 <div className="flex items-center gap-2">
                     <button

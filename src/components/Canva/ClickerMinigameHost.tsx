@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { MinigameWindow } from './MinigameWindow';
 import { useMinigamesStore } from '@/store/minigamesStore';
 import { useThemeStore } from '@/store/themeStore';

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+﻿import { useState, useCallback } from 'react';
 import { Players, ActiveImage, ActiveArea, ActivePin, Layer, ActiveSoundboardItem, ActiveNote, ActiveGlobalTrack, ActiveWall } from '@/interfaces/utils/indexedDB';
 
 export interface CanvasStateSnapshot {

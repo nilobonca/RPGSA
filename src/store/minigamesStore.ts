@@ -14,6 +14,7 @@ interface PlayerProgress {
   name?: string;
   coinResult?: string;
   spinning?: boolean;
+  cardResult?: { index: number; card?: { type: string; value: string; title?: string }; imageUrl?: string };
 }
 
 interface MinigamesState {
@@ -25,7 +26,8 @@ interface MinigamesState {
   removeGame: (id: string) => void;
   toggleMinimize: (id: string) => void;
   updateGame: (id: string, update: Partial<ActiveGame>) => void;
-  updateProgress: (listenerId: string, clicks: number, name?: string, coinResult?: string) => void;
+  updateGameConfig: (id: string, updater: (config: any) => any) => void;
+  updateProgress: (listenerId: string, clicks: number, name?: string, coinResult?: string, cardResult?: { index: number; card?: { type: string; value: string; title?: string }; imageUrl?: string }) => void;
   setSpinning: (listenerId: string, spinning: boolean, name?: string) => void;
   clearProgress: () => void;
   setBroadcastEvent: (fn: (event: { type: string, payload: any }) => void) => void;
@@ -53,12 +55,24 @@ export const useMinigamesStore = create<MinigamesState>((set) => ({
     activeGames: state.activeGames.map(g => g.id === id ? { ...g, ...update } : g)
   })),
 
-  updateProgress: (listenerId, clicks, name, coinResult) => set((state) => {
+  updateGameConfig: (id, updater) => set((state) => ({
+    activeGames: state.activeGames.map(g => 
+      g.id === id ? { ...g, config: updater(g.config || {}) } : g
+    )
+  })),
+
+  updateProgress: (listenerId, clicks, name, coinResult, cardResult) => set((state) => {
     const existing = state.playerProgress[listenerId];
     return {
       playerProgress: {
         ...state.playerProgress,
-        [listenerId]: { clicks, name: name || existing?.name || 'Ouvinte', coinResult: coinResult || existing?.coinResult, spinning: false }
+        [listenerId]: { 
+          clicks, 
+          name: name || existing?.name || 'Ouvinte', 
+          coinResult: coinResult || existing?.coinResult, 
+          cardResult: cardResult || existing?.cardResult,
+          spinning: false 
+        }
       }
     };
   }),

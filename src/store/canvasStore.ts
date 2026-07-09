@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 
 interface CanvasUIState {
   headerOpen: boolean;
@@ -95,7 +95,7 @@ export const useCanvasGlobalStore = create<CanvasGlobalStore>((set) => ({
   setActivePlayersOpen: (open) => { set({ activePlayersOpen: open }); if(open) useCanvasGlobalStore.getState().bringToFront('activePlayers'); },
   setGlobalTracksOpen: (open) => { set({ globalTracksOpen: open }); if(open) useCanvasGlobalStore.getState().bringToFront('globalTracks'); },
   setMobileMenuOpen: (open) => set({ mobileMenuOpen: open }),
-    setListenersOpen: (open) => set({ listenersOpen: open }),
+    setListenersOpen: (open) => { set({ listenersOpen: open }); if(open) useCanvasGlobalStore.getState().bringToFront('listeners'); },
   setListenerSettingsOpen: (open) => set({ listenerSettingsOpen: open }),
   
   bringToFront: (menuId) => set((state) => {

@@ -5,6 +5,7 @@ import { useCanvas } from '../canva-teste';
 import { cn } from '@/lib/utils';
 import { useGesture } from '@use-gesture/react';
 import { ActiveWall } from '@/interfaces/utils/indexedDB';
+import { distanceToPolyline, distanceToSegment } from '@/utils/geometry';
 import { handleDeepSelectCycle } from '@/utils/deep-select';
 
 interface EditableWallProps {
@@ -21,26 +22,7 @@ interface EditableWallProps {
     zIndex?: number;
 }
 
-function distToSegment(p: { x: number, y: number }, v: { x: number, y: number }, w: { x: number, y: number }) {
-    const l2 = (w.x - v.x) ** 2 + (w.y - v.y) ** 2;
-    if (l2 === 0) return Math.sqrt((p.x - v.x) ** 2 + (p.y - v.y) ** 2);
-    let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
-    t = Math.max(0, Math.min(1, t));
-    const projection = {
-        x: v.x + t * (w.x - v.x),
-        y: v.y + t * (w.y - v.y)
-    };
-    return Math.sqrt((p.x - projection.x) ** 2 + (p.y - projection.y) ** 2);
-}
 
-function distanceToPolyline(point: { x: number, y: number }, points: { x: number, y: number }[]) {
-    let minDistance = Infinity;
-    for (let i = 0; i < points.length - 1; i++) {
-        const d = distToSegment(point, points[i], points[i + 1]);
-        if (d < minDistance) minDistance = d;
-    }
-    return minDistance;
-}
 
 
 interface EditableWallPointProps {
@@ -194,7 +176,7 @@ export function EditableWall({
         if (isEditMode) {
             let foundLine: number | null = null;
             for (let i = 0; i < wall.points.length - 1; i++) {
-                const dist = distToSegment({ x: mouseX, y: mouseY }, wall.points[i], wall.points[i + 1]);
+                const dist = distanceToSegment({ x: mouseX, y: mouseY }, wall.points[i], wall.points[i + 1]);
                 if (dist < 10) {
                     foundLine = i;
                     break;

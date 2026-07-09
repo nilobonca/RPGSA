@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { Players, ActiveImage, ActiveArea, ActivePin, ActiveSoundboardItem, ActiveNote, ActiveWall } from '@/interfaces/utils/indexedDB';
 import { useShortcutStore } from '@/store/shortcutStore';
 import { useCanvasGlobalStore } from '@/store/canvasStore';

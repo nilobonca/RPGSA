@@ -5,7 +5,12 @@ import AudioPlayerList from '@/components/player-list';
 import { Plus } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
-export const GlobalTracksMenu: React.FC = () => {
+interface GlobalTracksMenuProps {
+    isPreviewInstance?: boolean;
+    isHiddenReal?: boolean;
+}
+
+export const GlobalTracksMenu: React.FC<GlobalTracksMenuProps> = ({ isPreviewInstance, isHiddenReal }) => {
     const { activeGlobalTracks, addGlobalTrackPersisted, updateGlobalTrackPersisted, deleteGlobalTrackPersisted, savedAudios } = useIDB();
 
     const handleDropOnMenu = (e: React.DragEvent) => {
@@ -35,6 +40,25 @@ export const GlobalTracksMenu: React.FC = () => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'copy';
     };
+
+    if (isHiddenReal) {
+        return <div style={{ display: 'none' }}>
+            {activeGlobalTracks.map(track => {
+                const audio = savedAudios.find(a => a.id === track.linkedAudioId || a.id === Number(track.linkedAudioId));
+                if (!audio) return null;
+                return <AudioPlayerList
+                    key={track.id}
+                    playerId={track.id}
+                    audio={audio}
+                    onDelete={() => {}}
+                    onDuplicate={() => {}}
+                    forcePlay={track.isPlaying}
+                    isPreviewInstance={isPreviewInstance}
+                    isHiddenReal={isHiddenReal}
+                />
+            })}
+        </div>;
+    }
 
     return (
         <div
@@ -76,6 +100,8 @@ export const GlobalTracksMenu: React.FC = () => {
                             onFilterChange={(f) => updateGlobalTrackPersisted({ ...track, filterType: f })}
                             forcePlay={track.isPlaying}
                             onPlayStateChange={(playing) => updateGlobalTrackPersisted({ ...track, isPlaying: playing })}
+                            isPreviewInstance={isPreviewInstance}
+                            isHiddenReal={isHiddenReal}
                         />
                     </div>
                 );

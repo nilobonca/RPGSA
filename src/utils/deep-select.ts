@@ -1,4 +1,4 @@
-import { useCanvasGlobalStore } from '@/store/canvasStore';
+﻿import { useCanvasGlobalStore } from '@/store/canvasStore';
 
 export const handleDeepSelectCycle = (clientX: number, clientY: number, clickedItemId: string, isCurrentlySelected: boolean): boolean => {
     // Only trigger deep select if the clicked item is ALREADY selected

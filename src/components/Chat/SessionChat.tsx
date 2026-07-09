@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { Send, Volume2, VolumeX, X, MessageSquare, Dices, Trash2 } from 'lucide-react';
 import { ChatMessage } from '@/interfaces/chat';
+import { formatTimestamp } from '@/utils/time';
 import { DiceTray } from '@/components/Dice/DiceTray';
 
 interface SessionChatProps {
@@ -52,9 +53,6 @@ export const SessionChat: React.FC<SessionChatProps> = ({
     }
   };
 
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
 
   return (
     <div className={`flex flex-col bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-gray-200/50 dark:border-white/10 rounded-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 ${className}`}>
@@ -117,7 +115,7 @@ export const SessionChat: React.FC<SessionChatProps> = ({
               return (
                 <div key={msg.id} className="flex flex-col items-center my-3">
                   <div className="text-[11px] text-neutral-400 font-medium tracking-wide mb-1">
-                    {isMe ? 'Você' : msg.senderName} • {formatTime(msg.timestamp)}
+                    {isMe ? 'Você' : msg.senderName} â€¢ {formatTimestamp(msg.timestamp)}
                   </div>
                   <div 
                     className="px-5 py-3 w-full max-w-[90%] bg-gradient-to-br from-indigo-950/80 via-neutral-900/90 to-fuchsia-950/80 border border-indigo-500/40 rounded-2xl shadow-xl text-[15px] text-indigo-50 font-medium tracking-wide text-center"
@@ -132,7 +130,7 @@ export const SessionChat: React.FC<SessionChatProps> = ({
             return (
               <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} my-1`}>
                 <span className="text-[11px] text-neutral-400 font-medium tracking-wide mb-1 px-1">
-                  {isMe ? 'Você' : msg.senderName} • {formatTime(msg.timestamp)}
+                  {isMe ? 'Você' : msg.senderName} â€¢ {formatTimestamp(msg.timestamp)}
                 </span>
                 <div 
                   className={`px-4 py-2.5 rounded-2xl max-w-[85%] text-[15px] leading-relaxed break-words shadow-md ${

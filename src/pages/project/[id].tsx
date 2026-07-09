@@ -12,7 +12,7 @@ import { useCanvasGlobalStore } from '@/store/canvasStore';
 import { useMinigamesStore } from '@/store/minigamesStore';
 import { useCanvasShortcuts } from '@/hooks/useCanvasShortcuts';
 import { useAudioInteractions } from '@/hooks/useAudioInteractions';
-import { isPointInPolygon, getPolygonCentroid } from '@/hooks/useCanvasMath';
+import { isPointInPolygon, getPolygonCentroid } from '@/utils/geometry';
 import { useThemeStore } from '@/store/themeStore';
 import clsx from 'clsx';
 
@@ -229,14 +229,17 @@ export default function ProjectCanvas() {
     deleteNotePersisted,
     updateAudioPersisted,
     activeGlobalTracks,
+    updateGlobalTrackPersisted,
     realActiveAreas,
     realActivePins,
     realActiveWalls,
     realActiveGlobalTracks,
+    realActivePlayers,
     isPreviewMode,
     startPreview,
     commitPreview,
-    discardPreview
+    discardPreview,
+    deleteAssetFolder
    } = useIDB();
  
   const {
@@ -362,7 +365,7 @@ export default function ProjectCanvas() {
     addToHistory, handleUndo, handleRedo,
     toggleDiceTray: () => setIsDiceTrayOpen(prev => !prev),
     toggleChat: () => toggleChat(!isChatOpen),
-    setTool,
+    setTool: setTool as any,
     isPreviewMode, startPreview, discardPreview,
     isTheaterMode, setIsTheaterMode,
     stopAllAudio: () => {
@@ -739,7 +742,11 @@ export default function ProjectCanvas() {
 
     const projectTracks = activeGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId);
     const realProjectTracks = realActiveGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId);
-    calculateInteractions(currentActivePins, currentActiveAreas, activeWalls, projectTracks, realActivePins, realActiveAreas, realActiveWalls, realProjectTracks);
+    
+    const guestPins = isPreviewMode ? realActivePins : currentActivePins;
+    const guestAreas = isPreviewMode ? realActiveAreas : currentActiveAreas;
+    
+    calculateInteractions(currentActivePins, currentActiveAreas, activeWalls, projectTracks, guestPins, guestAreas, realActiveWalls, realProjectTracks);
   };
 
   const linkAreaToAudio = (areaId: string, audioId: number) => {
@@ -810,7 +817,8 @@ export default function ProjectCanvas() {
     savedAudios,
     getOrCreateListenerGraph,
     removeListenerGraph,
-    objectUrlsRef
+    objectUrlsRef,
+    isPreviewMode
   );
 
   const projectGlobalTracks = useMemo(() => {
@@ -828,7 +836,13 @@ export default function ProjectCanvas() {
     const wallsStr = activeWalls.map(w => `${w.id}:${w.points.map(pt => `${pt.x},${pt.y}`).join(';')}:${w.mufflingFactor}`).join('|');
     const tracksStr = projectGlobalTracks.map(t => `${t.id}:${t.linkedAudioId}:${t.isPlaying}:${t.volume}`).join('|');
     const realTracksStr = realProjectGlobalTracks.map(t => `${t.id}:${t.linkedAudioId}:${t.isPlaying}:${t.volume}`).join('|');
-    return `${pinsStr}#${areasStr}#${wallsStr}#${tracksStr}#${realActivePins.length}#${realActiveAreas.length}#${realActiveWalls.length}#${realTracksStr}`;
+    
+    // Also include detailed hashes for real states (used for guests) so that commits from preview trigger a re-calculation
+    const realPinsStr = realActivePins.map(p => `${p.id}:${p.position.x},${p.position.y}:${p.enabled}`).join('|');
+    const realAreasStr = realActiveAreas.map(a => `${a.id}:${a.points.map(pt => `${pt.x},${pt.y}`).join(';')}:${a.audioRotation}:${a.filterType}:${a.linkedAudioId}:${a.volumeMode}:${a.proximityRadius}:${a.volume}:${a.pitch}`).join('|');
+    const realWallsStr = realActiveWalls.map(w => `${w.id}:${w.points.map(pt => `${pt.x},${pt.y}`).join(';')}:${w.mufflingFactor}`).join('|');
+
+    return `${pinsStr}#${areasStr}#${wallsStr}#${tracksStr}#${realPinsStr}#${realAreasStr}#${realWallsStr}#${realTracksStr}`;
   }, [activePins, activeAreas, activeWalls, projectGlobalTracks, realActivePins, realActiveAreas, realActiveWalls, realProjectGlobalTracks]);
 
   useEffect(() => {
@@ -1000,7 +1014,7 @@ export default function ProjectCanvas() {
       try {
         const Peer = (await import('peerjs')).default;
         const gmPeerId = `visual-sound-design-${projectId}`;
-        console.log(`[DEBUG] Initializing PeerJS Host with ID: ${gmPeerId}`);
+
 
         const peer = new Peer(gmPeerId, {
           debug: 1
@@ -1008,7 +1022,7 @@ export default function ProjectCanvas() {
         peerRef.current = peer;
 
         peer.on('open', (id) => {
-          console.log(`[DEBUG] PeerJS Host opened: ${id}`);
+
           isChannelSubscribedRef.current = true;
         });
 
@@ -1018,14 +1032,14 @@ export default function ProjectCanvas() {
         });
 
         peer.on('close', () => {
-          console.log('[DEBUG] PeerJS Host closed');
+
           isChannelSubscribedRef.current = false;
         });
 
         peer.on('connection', (conn) => {
           const listenerId = conn.peer;
           const name = (conn.metadata as any)?.name || 'Ouvinte Anônimo';
-          console.log(`[DEBUG] P2P Connection from: ${name} (${listenerId})`);
+
 
           connectionsRef.current[listenerId] = conn;
 
@@ -1041,7 +1055,7 @@ export default function ProjectCanvas() {
               ctx.resume().then(() => {
                 const graph = getOrCreateListenerGraph(listenerId);
                 if (graph && graph.destination instanceof MediaStreamAudioDestinationNode && peerRef.current) {
-                  console.log(`[DEBUG] Calling listener peer with media stream: ${listenerId}`);
+
                   const call = peerRef.current.call(listenerId, graph.destination.stream);
                   graph.call = call;
                 }
@@ -1064,7 +1078,7 @@ export default function ProjectCanvas() {
             } else if (data.type === 'coin_spinning') {
               useMinigamesStore.getState().setSpinning(listenerId, data.payload.spinning, name);
             } else if (data.type === 'minigame_progress') {
-              useMinigamesStore.getState().updateProgress(listenerId, data.payload.clicks, name, data.payload.coinResult);
+              useMinigamesStore.getState().updateProgress(listenerId, data.payload.clicks, name, data.payload.coinResult, data.payload.cardResult);
             } else if (data.type === 'chat') {
                 const msg: ChatMessage = data.payload;
                 setChatMessages(prev => {
@@ -1089,7 +1103,7 @@ export default function ProjectCanvas() {
           });
 
           conn.on('close', () => {
-            console.log(`[DEBUG] Connection closed: ${name}`);
+
             delete connectionsRef.current[listenerId];
             removeListenerGraph(listenerId);
             setSessionListeners(prev => prev.filter(l => l.listenerId !== listenerId));
@@ -1178,6 +1192,7 @@ export default function ProjectCanvas() {
       const { soundboardItemId, url, volume, pitch } = payload;
       const ctx = getSharedAudioContext();
       if (!ctx) return;
+      if (isPreviewMode) return; // Prevent broadcasting to guests when in preview mode
 
       const instances: { sound: HTMLAudioElement; source: MediaElementAudioSourceNode; jungle?: Jungle }[] = [];
 
@@ -1319,7 +1334,11 @@ export default function ProjectCanvas() {
     } else {
       const projectTracks = activeGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId);
       const realProjectTracks = realActiveGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId);
-      calculateInteractions(currentActivePins, currentActiveAreas, activeWalls, projectTracks, realActivePins, realActiveAreas, realActiveWalls, realProjectTracks);
+      
+      const guestPins = isPreviewMode ? realActivePins : currentActivePins;
+      const guestAreas = isPreviewMode ? realActiveAreas : currentActiveAreas;
+      
+      calculateInteractions(currentActivePins, currentActiveAreas, activeWalls, projectTracks, guestPins, guestAreas, realActiveWalls, realProjectTracks);
     }
   };
 
@@ -1329,6 +1348,10 @@ export default function ProjectCanvas() {
     if (pin) {
       canvasRef.current?.centerOn(pin.position.x, pin.position.y);
     }
+  };
+
+  const handleLocatePlayer = (x: number, y: number) => {
+    canvasRef.current?.centerOn(x, y);
   };
 
   const handleKickListener = (listenerId: string) => {
@@ -1656,7 +1679,19 @@ return (
       )}
 
       {/* Global Audio Player engine */}
-      <GlobalAudioPlayer activeGlobalTracks={activeGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId)} />
+      {isPreviewMode && (
+          <>
+              <GlobalAudioPlayer activeGlobalTracks={realActiveGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId)} isHiddenReal={true} />
+              <ActivePlayersMenu
+                  activePlayers={realActivePlayers}
+                  activeAreas={realActiveAreas}
+                  savedAudios={savedAudios}
+                  onClose={() => {}}
+                  isHiddenReal={true}
+              />
+          </>
+      )}
+      <GlobalAudioPlayer activeGlobalTracks={activeGlobalTracks.filter(t => t.projectId === (projectId ? projectId.toString() : "0") || !t.projectId)} isPreviewInstance={isPreviewMode} />
 
       {/* Chat Drawer */}
       {isChatOpen && (
@@ -1714,6 +1749,7 @@ return (
         handleRedo={handleRedo}
         handleRestoreHistory={handleRestoreHistory}
         isSessionActive={isSessionActive}
+        isPreviewMode={isPreviewMode}
         sessionListeners={sessionListeners}
         listenerPings={listenerPings}
         handleLocateListener={handleLocateListener}
@@ -1740,6 +1776,7 @@ return (
         deletePlayer={deletePlayer}
         deleteArea={deleteArea}
         handleUpdateArea={handleUpdateArea}
+        handleLocatePlayer={handleLocatePlayer}
         
         isEditingName={isEditingName}
         setIsEditingName={setIsEditingName}
@@ -2248,6 +2285,7 @@ return (
           deletePinPersisted={deletePinPersisted}
           handleEditImage={handleEditImage}
           deleteImagePersisted={deleteImagePersisted}
+          deleteAssetFolder={deleteAssetFolder}
           deleteSoundboardItem={deleteSoundboardItem}
           deleteSoundboardItemPersisted={deleteSoundboardItemPersisted}
           deleteAudio={deleteAudio}

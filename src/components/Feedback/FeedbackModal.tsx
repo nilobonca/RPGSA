@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -92,7 +92,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onClose }) => {
             <Card className="absolute top-12 right-0 w-80 shadow-xl animate-in fade-in slide-in-from-top-5 border-green-500">
                 <CardContent className="pt-6">
                     <div className="flex flex-col items-center justify-center text-center space-y-2">
-                        <div className="text-2xl">🎉</div>
+                        <div className="text-2xl">ðŸŽ‰</div>
                         <h3 className="font-semibold text-green-600">Thank You!</h3>
                         <p className="text-sm text-muted-foreground">Your feedback has been recorded.</p>
                     </div>

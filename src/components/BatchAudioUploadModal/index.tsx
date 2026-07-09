@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileAudio, Loader2, X, Check } from 'lucide-react';
 import clsx from 'clsx';

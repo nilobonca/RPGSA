@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Layers, MapPin, Clock, X, ExternalLink, Folder, LayoutGrid, Music, Circle } from 'lucide-react';
 
 interface DockedMenuProps {

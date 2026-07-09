@@ -43,6 +43,7 @@ interface ProjectCanvasContextMenuProps {
   deleteSoundboardItemPersisted: (id: string) => void;
   deleteAudio: (id: number) => void;
   deleteImage: (id: number) => void;
+  deleteAssetFolder?: (id: string) => void;
   deleteWallPersisted?: (id: string) => void;
   createArea: (pos: {x: number, y: number}) => void;
   createPin: (pos: {x: number, y: number}) => void;
@@ -81,7 +82,8 @@ export function ProjectCanvasContextMenu({
   linkAreaToAudio,
   setEditingSoundboardItemId,
   linkSoundboardItemToAudio,
-  deleteWallPersisted
+  deleteWallPersisted,
+  deleteAssetFolder
 }: ProjectCanvasContextMenuProps) {
   if (!contextMenu) return null;
 
@@ -507,10 +509,37 @@ export function ProjectCanvasContextMenu({
           { label: 'Excluir Item', onClick: () => { if (contextMenu.itemId) deleteSoundboardItemPersisted(contextMenu.itemId); }, icon: <Trash2 size={18} /> }
         ] : []),
         ...(contextMenu.type === 'asset-audio' ? [
+          {
+            label: 'Renomear',
+            icon: <Edit2 size={18} />,
+            onClick: () => {
+              window.dispatchEvent(new CustomEvent('start-asset-rename', { detail: { id: contextMenu.itemId, type: 'audio' } }));
+              setContextMenu(null);
+            }
+          },
           { label: 'Excluir Áudio', onClick: () => { if (contextMenu.itemId) deleteAudio(Number(contextMenu.itemId)); }, icon: <Trash2 size={18} /> }
         ] : []),
         ...(contextMenu.type === 'asset-image' ? [
+          {
+            label: 'Renomear',
+            icon: <Edit2 size={18} />,
+            onClick: () => {
+              window.dispatchEvent(new CustomEvent('start-asset-rename', { detail: { id: contextMenu.itemId, type: 'image' } }));
+              setContextMenu(null);
+            }
+          },
           { label: 'Excluir Imagem', onClick: () => { if (contextMenu.itemId) deleteImage(Number(contextMenu.itemId)); }, icon: <Trash2 size={18} /> }
+        ] : []),
+        ...(contextMenu.type === 'asset-folder' ? [
+          {
+            label: 'Renomear',
+            icon: <Edit2 size={18} />,
+            onClick: () => {
+              window.dispatchEvent(new CustomEvent('start-asset-rename', { detail: { id: contextMenu.itemId, type: 'folder' } }));
+              setContextMenu(null);
+            }
+          },
+          { label: 'Excluir Pasta', onClick: () => { if (contextMenu.itemId && deleteAssetFolder) deleteAssetFolder(contextMenu.itemId); }, icon: <Trash2 size={18} /> }
         ] : [])
       ]}
     />

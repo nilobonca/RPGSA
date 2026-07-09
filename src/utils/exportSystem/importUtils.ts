@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+﻿import JSZip from 'jszip';
 import { Layer, Audios, Images } from '@/interfaces/utils/indexedDB';
 import { v4 as uuidv4 } from 'uuid';
 

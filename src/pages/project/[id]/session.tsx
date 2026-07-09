@@ -29,8 +29,10 @@ export default function ListenerSession() {
 
     // Clicker & Coin Flip Minigame State
     const [isClickerActive, setIsClickerActive] = useState(false);
+    const isClickerActiveRef = useRef(isClickerActive);
     const [isFadingOut, setIsFadingOut] = useState(false);
     const [clickerConfig, setClickerConfig] = useState<any>(null);
+    const clickerConfigRef = useRef<any>(null);
     const [localClicks, setLocalClicks] = useState(0);
     const [gameOver, setGameOver] = useState(false);
     const [timeLeft, setTimeLeft] = useState(0);
@@ -46,6 +48,10 @@ export default function ListenerSession() {
     const resolveCoinFlipRef = useRef<((forcedResult?: 'heads' | 'tails') => void) | null>(null);
     const forcedCoinResultRef = useRef<'heads' | 'tails' | null>(null);
 
+    // Cards specific state
+    const [cardState, setCardState] = useState<{ index: number | null, flipped: Record<number, boolean> }>({ index: null, flipped: {} });
+    const [cardPermissions, setCardPermissions] = useState({ canSee: true, canInteract: true, canSeeResult: false });
+
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const streamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -56,6 +62,14 @@ export default function ListenerSession() {
     const peerRef = useRef<any>(null);
     const currentCallRef = useRef<any>(null);
     const audioElRef = useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        isClickerActiveRef.current = isClickerActive;
+    }, [isClickerActive]);
+
+    useEffect(() => {
+        clickerConfigRef.current = clickerConfig;
+    }, [clickerConfig]);
 
     const playPing = () => {
         if (chatSoundEnabledRef.current) {
@@ -78,11 +92,11 @@ export default function ListenerSession() {
         }
     };
 
-    const sendClickProgress = useCallback((clicks: number, coinResult?: string) => {
+    const sendClickProgress = useCallback((clicks: number, coinResult?: string, cardResult?: { index: number, card?: { type: string, value: string, title?: string }, imageUrl?: string }) => {
         if (channelRef.current) {
             channelRef.current.send({
                 type: 'minigame_progress',
-                payload: { clicks, coinResult }
+                payload: { clicks, coinResult, cardResult }
             });
         }
     }, []);
@@ -149,6 +163,36 @@ export default function ListenerSession() {
         // Add to local UI
         setChatMessages(prev => [...prev, msg]);
     }, [listenerId, username]);
+
+    const handleCardClick = useCallback((index: number) => {
+        if (!isClickerActive || gameOver || !cardPermissions.canInteract) return;
+        
+        // Prevent double clicking if already selected one
+        if (cardState.index !== null) return;
+        
+        const cards = clickerConfig?.config?.cards || [];
+        const card = cards.length > 0 ? cards[index % cards.length] : null;
+        
+        setCardState(prev => ({
+            ...prev,
+            index,
+            flipped: { ...prev.flipped, [index]: true }
+        }));
+        
+        sendClickProgress(localClicks + 1, undefined, { index, card });
+        
+        const initialFace = clickerConfig?.config?.initialFace || 'down';
+        
+        if (initialFace === 'down') {
+            if (cardPermissions.canSeeResult) {
+                handleSendMessage(`🃏 virou a carta **${index + 1}** e revelou sua escolha!`);
+            } else {
+                handleSendMessage(`🃏 escolheu a carta **${index + 1}** (secreta)!`);
+            }
+        } else {
+            handleSendMessage(`🃏 escolheu a carta **${index + 1}**!`);
+        }
+    }, [isClickerActive, gameOver, cardPermissions, cardState.index, clickerConfig, localClicks, sendClickProgress, handleSendMessage]);
 
     const resolveCoinFlip = useCallback((forcedResult?: 'heads' | 'tails') => {
         if (coinSpinTimerRef.current) {
@@ -296,9 +340,9 @@ export default function ListenerSession() {
                 peerRef.current = peer;
 
                 peer.on('open', (id) => {
-                    console.log(`[DEBUG] Listener Peer opened with ID: ${id}`);
+
                     const gmPeerId = `visual-sound-design-${projectId}`;
-                    console.log(`[DEBUG] Connecting P2P to GM: ${gmPeerId}`);
+
                     
                     const conn = peer.connect(gmPeerId, {
                         metadata: { name: username }
@@ -306,7 +350,7 @@ export default function ListenerSession() {
                     channelRef.current = conn;
 
                     conn.on('open', () => {
-                        console.log('[DEBUG] P2P Connection opened with GM!');
+
                         setStatus('connected');
                         setIsJoined(true);
                     });
@@ -344,6 +388,19 @@ export default function ListenerSession() {
                                     setGameOver(false);
                                     setTimeLeft(payload.config?.timeLimit || 30);
                                 }
+                            } else if (payload.gameType === 'cards') {
+                                const permissions = payload.config?.permissions || {};
+                                const userPerms = permissions[listenerId] || { canSee: true, canInteract: true, canSeeResult: false };
+                                
+                                if (userPerms.canSee) {
+                                    setIsClickerActive(true);
+                                    setIsFadingOut(false);
+                                    setClickerConfig(payload);
+                                    setCardPermissions(userPerms);
+                                    setCardState({ index: null, flipped: {} });
+                                    setGameOver(false);
+                                    setTimeLeft(payload.config?.timeLimit || 0);
+                                }
                             } else {
                                 setIsClickerActive(true);
                                 setIsFadingOut(false);
@@ -351,6 +408,25 @@ export default function ListenerSession() {
                                 setLocalClicks(0);
                                 setGameOver(false);
                                 setTimeLeft(payload.config?.timeLimit || 30);
+                            }
+                        } else if (data.type === 'update_card_permissions') {
+                            if (clickerConfigRef.current?.gameType === 'cards') {
+                                const permissions = data.payload?.config?.permissions || data.payload?.permissions || {};
+                                const userPerms = permissions[listenerId];
+                                if (userPerms) {
+                                    setCardPermissions(userPerms);
+                                    if (data.payload?.config) {
+                                        setClickerConfig(data.payload);
+                                    }
+                                    if (!userPerms.canSee) {
+                                        setIsClickerActive(false);
+                                        setGameOver(true);
+                                    } else {
+                                        setIsClickerActive(true);
+                                        setIsFadingOut(false);
+                                        setGameOver(false);
+                                    }
+                                }
                             }
                         } else if (data.type === 'minigame_end') {
                             setIsClickerActive(false);
@@ -366,7 +442,7 @@ export default function ListenerSession() {
                     });
 
                     conn.on('close', () => {
-                        console.log('[DEBUG] GM connection closed P2P');
+
                         setStatus('disconnected');
                         handleLeave();
                     });
@@ -380,14 +456,14 @@ export default function ListenerSession() {
 
                 // Listen for incoming live stream calls from GM
                 peer.on('call', (call) => {
-                    console.log('[DEBUG] Incoming WebRTC media stream call from GM!');
+
                     currentCallRef.current = call;
                     
                     // Answer the call with no outbound stream
                     call.answer();
 
                     call.on('stream', (remoteStream) => {
-                        console.log('[DEBUG] Received remote MediaStream!');
+
                         
                         // 1. Play the stream using the hidden audio element
                         if (audioElRef.current) {
@@ -763,6 +839,77 @@ export default function ListenerSession() {
                                             </div>
                                         </div>
                                     </>
+                                ) : clickerConfig?.gameType === 'cards' ? (
+                                    <div className="w-full flex flex-col items-center">
+                                        <style dangerouslySetInnerHTML={{ __html: `
+                                            @keyframes flipCard {
+                                                from { transform: rotateY(0deg); }
+                                                to { transform: rotateY(180deg); }
+                                            }
+                                        ` }} />
+                                        
+                                        {/* Timer if applicable */}
+                                        {clickerConfig?.config?.timeLimit > 0 && (
+                                            <div className="mb-8">
+                                                <div className="text-4xl font-light text-white/90 font-mono tabular-nums tracking-tighter">
+                                                    00:{timeLeft.toString().padStart(2, '0')}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="flex flex-wrap gap-4 justify-center max-w-4xl">
+                                            {Array.from({ length: clickerConfig.config.quantity || 3 }).map((_, i) => {
+                                                const isFlipped = cardState.flipped[i] || clickerConfig.config.initialFace === 'up';
+                                                const canInteract = cardPermissions.canInteract && !gameOver && cardState.index === null;
+                                                const cards = clickerConfig.config.cards || [];
+                                                const card = cards.length > 0 ? cards[i % cards.length] : null;
+
+                                                return (
+                                                    <div 
+                                                        key={i}
+                                                        onClick={() => canInteract && handleCardClick(i)}
+                                                        className={`relative w-32 h-48 sm:w-40 sm:h-56 rounded-xl shadow-lg transition-transform duration-300 mx-auto ${canInteract ? 'cursor-pointer hover:scale-105 hover:-translate-y-2' : ''} ${cardState.index === i ? 'ring-4 ring-indigo-500 ring-offset-4 ring-offset-neutral-900' : ''}`}
+                                                        style={{ perspective: '1000px' }}
+                                                    >
+                                                        <div 
+                                                            className="relative w-full h-full"
+                                                            style={{
+                                                                transformStyle: 'preserve-3d',
+                                                                transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                                                                transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                                                            }}
+                                                        >
+                                                            {/* Front (Card Back) */}
+                                                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 to-purple-900 rounded-xl border-2 border-indigo-500/30 flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]" style={{ backfaceVisibility: 'hidden' }}>
+                                                                <div className="w-12 h-12 border-2 border-indigo-400/30 rotate-45 flex items-center justify-center">
+                                                                    <div className="w-8 h-8 border border-indigo-400/20 rotate-45"></div>
+                                                                </div>
+                                                            </div>
+                                                            {/* Back (Card Face) */}
+                                                            <div className="absolute inset-0 bg-neutral-100 rounded-xl flex items-center justify-center border-2 border-neutral-300 overflow-hidden flex-col" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                                                                {!cardPermissions.canSeeResult && clickerConfig.config.initialFace === 'down' ? (
+                                                                    <span className="text-5xl">❓</span>
+                                                                ) : card?.type === 'image' && card.value ? (
+                                                                    <>
+                                                                      <img src={card.value} alt={`Card ${i+1}`} className="w-full flex-1 object-cover" />
+                                                                      {card.title && card.showTitle && (
+                                                                        <div className="w-full bg-black/80 text-white text-center py-1 text-xs font-semibold px-1 break-words">
+                                                                          {card.title}
+                                                                        </div>
+                                                                      )}
+                                                                    </>
+                                                                ) : card?.type === 'text' && card.value ? (
+                                                                    <span className="text-3xl font-bold text-neutral-800 text-center px-4 break-words">{card.value}</span>
+                                                                ) : (
+                                                                    <span className="text-3xl font-bold text-neutral-800">{i + 1}</span>
+                                                                )}
+                                                            </div>
+                                                            </div>
+                                                        </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 ) : (
                                     <>
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { useGesture } from '@use-gesture/react';
 import { ActiveNote } from '@/interfaces/utils/indexedDB';
 import { useCanvas } from '../canva-teste';

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+﻿import React, { useRef, useState, useEffect } from 'react';
 import { SoundboardItem, Audios } from '@/interfaces/utils/indexedDB';
 import { RotateCcw, Square, Play, Repeat, Settings, X } from 'lucide-react';
 import { playSoundboardAudio, stopSoundboardAudio, activeSoundboardAudios } from './activeAudios';
@@ -106,14 +106,14 @@ export const SoundboardButton: React.FC<SoundboardButtonProps> = ({
             {/* Main button */}
             <div
                 className={`
-                    relative rounded-lg shadow-md flex flex-col items-center justify-center p-2 cursor-pointer transition-all select-none
+                    group relative rounded-2xl flex flex-col items-center justify-center p-2 cursor-pointer transition-all duration-300 select-none overflow-hidden
                     ${isPlaying
-                        ? 'bg-green-100 dark:bg-green-900/60 border-green-400 dark:border-green-600 ring-2 ring-green-400/60'
+                        ? 'bg-blue-500/20 dark:bg-blue-500/20 border-blue-400/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]'
                         : audio
-                            ? 'bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 border-blue-300 dark:border-blue-700'
-                            : 'bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 border-dashed border-gray-300 dark:border-neutral-600'}
-                    border-2
-                    ${isRenaming ? 'ring-2 ring-yellow-400' : ''}
+                            ? 'bg-white/60 dark:bg-neutral-800/60 hover:bg-white/90 dark:hover:bg-neutral-700/90 border-white/20 hover:border-blue-400/30 hover:shadow-lg'
+                            : 'bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border-dashed border-gray-300/50 dark:border-neutral-600/50'}
+                    border backdrop-blur-sm
+                    ${isRenaming ? 'ring-2 ring-violet-500 shadow-lg' : ''}
                 `}
                 style={{ width: 112, height: 112 }}
                 onClick={handleClick}
@@ -127,21 +127,21 @@ export const SoundboardButton: React.FC<SoundboardButtonProps> = ({
                     e.dataTransfer.setData('itemId', item.id);
                     e.dataTransfer.effectAllowed = 'copy';
                 }}
-                title={audio ? `${audio.name} — clique para tocar` : 'Arraste um áudio aqui'}
+                title={audio ? `${audio.name} â€” clique para tocar` : 'Arraste um áudio aqui'}
             >
-                {/* Playing dot */}
+                {/* Playing indicator */}
                 {isPlaying && (
-                    <span className="absolute top-1.5 left-1.5 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                    <span className="absolute top-2.5 left-2.5 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] animate-pulse" />
                 )}
 
                 {/* Settings button */}
                 {audio && !isRenaming && (
                     <button
-                        className="absolute top-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded bg-white dark:bg-neutral-700 hover:bg-gray-100 dark:hover:bg-neutral-600 text-gray-500 dark:text-neutral-300 shadow transition-colors z-10"
+                        className="absolute top-1.5 right-1.5 w-7 h-7 flex items-center justify-center rounded-lg bg-black/5 dark:bg-white/5 hover:bg-white dark:hover:bg-neutral-700 text-gray-500 dark:text-neutral-300 opacity-0 group-hover:opacity-100 transition-all z-10"
                         onClick={(e) => { e.stopPropagation(); setShowSettings(v => !v); }}
                         title="Configurações"
                     >
-                        {showSettings ? <X size={12} /> : <Settings size={12} />}
+                        {showSettings ? <X size={14} /> : <Settings size={14} />}
                     </button>
                 )}
 
@@ -151,14 +151,14 @@ export const SoundboardButton: React.FC<SoundboardButtonProps> = ({
                         ref={inputRef}
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        className="w-full text-center text-xs font-medium bg-white dark:bg-neutral-900 text-black dark:text-white border border-blue-500 rounded px-1 py-0.5 outline-none mt-4"
+                        className="w-full text-center text-xs font-medium bg-white/50 dark:bg-neutral-900/50 text-black dark:text-white border border-violet-500 rounded-lg px-2 py-1 outline-none mt-2 focus:ring-2 focus:ring-violet-500/20"
                         onBlur={handleRenameSubmit}
                         onKeyDown={handleKeyDown}
                         onClick={(e) => e.stopPropagation()}
                         onMouseDown={(e) => e.stopPropagation()}
                     />
                 ) : (
-                    <span className={`text-xs text-center font-semibold break-words w-full overflow-hidden px-1 mt-3 ${isPlaying ? 'text-green-800 dark:text-green-200' : 'text-gray-700 dark:text-gray-200'}`}>
+                    <span className={`text-[11px] text-center font-semibold break-words w-full overflow-hidden px-1 ${isPlaying ? 'text-blue-800 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>
                         {item.name || (audio ? audio.name : 'Vazio')}
                     </span>
                 )}
@@ -166,24 +166,24 @@ export const SoundboardButton: React.FC<SoundboardButtonProps> = ({
                 {/* Bottom controls */}
                 {!isRenaming && (
                     <div
-                        className="absolute bottom-1.5 right-1.5 flex gap-1"
+                        className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {isPlaying ? (
                             <>
                                 <button
                                     onClick={handleRestart}
-                                    className="w-7 h-7 flex items-center justify-center rounded bg-white dark:bg-neutral-700 hover:bg-green-100 dark:hover:bg-green-900 text-green-700 dark:text-green-300 transition-colors shadow"
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/80 dark:bg-neutral-700/80 backdrop-blur hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 transition-colors shadow-sm"
                                     title="Tocar do início"
                                 >
-                                    <RotateCcw size={13} />
+                                    <RotateCcw size={14} />
                                 </button>
                                 <button
                                     onClick={handleStop}
-                                    className="w-7 h-7 flex items-center justify-center rounded bg-white dark:bg-neutral-700 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 transition-colors shadow"
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/80 dark:bg-neutral-700/80 backdrop-blur hover:bg-red-100 dark:hover:bg-red-900/80 text-red-600 dark:text-red-400 transition-colors shadow-sm"
                                     title="Parar"
                                 >
-                                    <Square size={13} />
+                                    <Square size={14} />
                                 </button>
                             </>
                         ) : audio ? (
@@ -200,7 +200,7 @@ export const SoundboardButton: React.FC<SoundboardButtonProps> = ({
             {/* Settings panel */}
             {showSettings && audio && !isRenaming && (
                 <div
-                    className="absolute top-[116px] left-0 z-50 w-48 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-xl p-3 flex flex-col gap-3"
+                    className="absolute top-[116px] left-0 z-50 w-52 bg-white/90 dark:bg-neutral-800/90 backdrop-blur-xl border border-white/20 dark:border-neutral-700 rounded-xl shadow-2xl p-4 flex flex-col gap-4"
                     onClick={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
                 >

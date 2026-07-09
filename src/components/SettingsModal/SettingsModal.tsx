@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useThemeStore } from '@/store/themeStore';
 import { X, Check, DownloadCloud, UploadCloud, MessageSquareText, Palette, Monitor, Database, Keyboard, Gamepad2 } from 'lucide-react';
@@ -547,6 +547,70 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <span className={clsx(
                     "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200",
                     useThemeStore.getState().pinnedMinigames.includes('coin_flip') && "translate-x-5"
+                  )} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Cartas Minigame */}
+          <div className={clsx(
+            "p-6 rounded-2xl border transition-all",
+            theme === 'ethereal' ? "bg-white/5 border-white/10" : "bg-neutral-800/50 border-neutral-800"
+          )}>
+            <div className="flex items-center gap-4 mb-4">
+              <div className={clsx(
+                "p-3 rounded-xl",
+                theme === 'ethereal' ? "bg-white/10 text-white" : "bg-indigo-500/10 text-indigo-400"
+              )}>
+                <Gamepad2 size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-neutral-200">Cartas</h3>
+                <span className="text-xs text-indigo-400 font-medium">Novo</span>
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="pr-4">
+                  <h4 className="font-medium text-neutral-200">Distribuição de Cartas</h4>
+                  <p className="text-sm text-neutral-400 mt-1">
+                    Exiba cartas personalizadas para os ouvintes, com opções de face inicial e revelação (secreta ou pública).
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    addGame({
+                      id: `cards_${Date.now()}`,
+                      gameId: 'cards',
+                      title: 'Escolha uma Carta',
+                      isMinimized: false,
+                      status: 'idle',
+                      config: { permissions: {} }
+                    });
+                    onClose();
+                  }}
+                  className={clsx(
+                    "px-4 py-2 font-medium transition-all text-sm rounded-lg whitespace-nowrap",
+                    theme === 'ethereal' ? "bg-white/10 hover:bg-white/20 text-white" : "bg-neutral-800 hover:bg-neutral-700 text-white"
+                  )}
+                >
+                  Novo Desafio
+                </button>
+              </div>
+              <div className="flex items-center justify-between pt-4 border-t border-neutral-800 dark:border-white/10">
+                <div className="text-sm text-neutral-400">Fixar botão no menu lateral</div>
+                <button
+                  onClick={() => useThemeStore.getState().togglePinnedMinigame('cards')}
+                  className={clsx(
+                    "relative w-11 h-6 rounded-full transition-colors duration-200",
+                    useThemeStore.getState().pinnedMinigames.includes('cards') ? "bg-indigo-500" : "bg-neutral-700"
+                  )}
+                >
+                  <span className={clsx(
+                    "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200",
+                    useThemeStore.getState().pinnedMinigames.includes('cards') && "translate-x-5"
                   )} />
                 </button>
               </div>

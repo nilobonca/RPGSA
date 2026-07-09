@@ -19,7 +19,23 @@ interface LayerManagerProps {
     onClearCanvas?: (e: React.MouseEvent, pageId?: string) => void;
 }
 
-export default function LayerManager({ onLayerAction, onInteraction, onClose, activeProjectId, onSelectProject, projectGroupId, addToHistory, onClearCanvas }: LayerManagerProps) {
+class LayerManagerErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
+    constructor(props: any) { super(props); this.state = { hasError: false, error: null }; }
+    static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
+    componentDidCatch(error: any, errorInfo: any) { console.error('LayerManager Error:', error, errorInfo); }
+    render() {
+        if (this.state.hasError) {
+            return <div className="absolute inset-0 bg-red-500 text-white p-4 z-[9999] overflow-auto">
+                <h3 className="font-bold">LayerManager Crashed</h3>
+                <pre className="text-xs mt-2 whitespace-pre-wrap">{this.state.error?.toString()}</pre>
+                <pre className="text-xs mt-2 whitespace-pre-wrap">{this.state.error?.stack}</pre>
+            </div>;
+        }
+        return this.props.children;
+    }
+}
+
+function LayerManagerInner({ onLayerAction, onInteraction, onClose, activeProjectId, onSelectProject, projectGroupId, addToHistory, onClearCanvas }: LayerManagerProps) {
     const { activeLayers, reorderLayers, addLayer, deleteLayer, updateLayer } = useIDB();
     const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; layer: Layer; options?: Array<{ label: string; icon: string; onClick?: () => void; subMenu?: Array<{ label: string; icon: string; onClick: () => void }> }> } | null>(null);
@@ -233,7 +249,7 @@ export default function LayerManager({ onLayerAction, onInteraction, onClose, ac
     };
 
     const handleCreateLayer = () => {
-        console.log('Criar Pasta check:', { activeProjectId, projectGroupId });
+
         if (!activeProjectId) return;
 
         const newLayer: Layer = {
@@ -247,7 +263,7 @@ export default function LayerManager({ onLayerAction, onInteraction, onClose, ac
             depth: 1,
             projectId: projectGroupId || undefined // Add projectId for consistency
         };
-        console.log('Adicionando nova pasta:', newLayer);
+
         addLayer(newLayer);
     };
 
@@ -289,7 +305,7 @@ export default function LayerManager({ onLayerAction, onInteraction, onClose, ac
                 label: 'Duplicar',
                 icon: <Copy size={16} />,
                 onClick: () => {
-                    console.log('Duplicar', layer);
+
                     setContextMenu(null);
                 }
             },
@@ -329,7 +345,7 @@ export default function LayerManager({ onLayerAction, onInteraction, onClose, ac
         });
     };
 
-    const { size, setSize, position, onDragEnd, handleResizeStart, constraintRef, x, y } = useViewportResize({
+    const { size, setSize, position, onDragEnd, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
         initialSize: { width: 300, height: 400 },
         initialPosition: { x: 20, y: 80 },
         minWidth: 260,
@@ -450,8 +466,8 @@ export default function LayerManager({ onLayerAction, onInteraction, onClose, ac
             layout={false}
             initial={false}
             style={{ x, y,
-                width: size.width,
-                height: size.height,
+                width,
+                height,
                 maxHeight: '80vh',
                 left: position.x,
                 top: position.y,
@@ -512,4 +528,8 @@ export default function LayerManager({ onLayerAction, onInteraction, onClose, ac
             </div>
         </motion.div>
     );
+}
+
+export default function LayerManager(props: LayerManagerProps) {
+    return <LayerManagerErrorBoundary><LayerManagerInner {...props} /></LayerManagerErrorBoundary>;
 }

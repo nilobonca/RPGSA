@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { X, Edit2, Crop, Check } from 'lucide-react';
 import { ActiveImage } from '@/interfaces/utils/indexedDB';
@@ -434,7 +434,7 @@ const ImageItem: React.FC<ImageItemProps> = ({ image, onDelete, onEdit, onUpdate
                                 transformOrigin: 'bottom left'
                             }}
                         >
-                            ✏️ Editando
+                            âœï¸ Editando
                         </div>
                         {/* Resize Handles */}
                         {['nw', 'ne', 'sw', 'se'].map((corner) => (

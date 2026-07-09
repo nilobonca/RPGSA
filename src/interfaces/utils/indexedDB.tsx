@@ -1,4 +1,4 @@
-
+﻿
 export interface Audios {
     id: number;
     name: string;
@@ -7,6 +7,7 @@ export interface Audios {
     createdAt: Date;
     order?: number;
     publicUrl?: string;
+    folderId?: string;
 }
 
 export interface Players {
@@ -24,6 +25,14 @@ export interface Images {
     name: string;
     file: File;
     url: string;
+    createdAt: Date;
+    order?: number;
+    folderId?: string;
+}
+
+export interface AssetFolder {
+    id: string;
+    name: string;
     createdAt: Date;
     order?: number;
 }

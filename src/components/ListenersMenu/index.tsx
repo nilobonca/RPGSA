@@ -27,7 +27,7 @@ const ListenersMenu: React.FC<ListenersMenuProps> = ({
     const dragControls = useDragControls();
     const [searchTerm, setSearchTerm] = useState('');
 
-    const { size, setSize, position, setPosition, handleResizeStart, constraintRef, x, y } = useViewportResize({
+    const { size, setSize, position, setPosition, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
         initialSize: { width: 300, height: 350 },
         initialPosition: { x: 0, y: 100 }, // Will set dynamically on mount
         minWidth: 260,
@@ -148,8 +148,8 @@ const ListenersMenu: React.FC<ListenersMenuProps> = ({
             layout={false}
             initial={false}
             style={{ x, y,
-                width: size.width,
-                height: size.height,
+                width,
+                height,
                 maxHeight: '75vh',
                 zIndex: 65
             }}

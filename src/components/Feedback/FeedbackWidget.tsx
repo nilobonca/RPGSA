@@ -1,21 +1,14 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { MessageSquarePlus } from 'lucide-react';
 import FeedbackModal from './FeedbackModal';
 import { usePolls } from '@/contexts/PollsContext';
-import { useTracking } from '@/contexts/TrackingContext';
-
 export const FeedbackWidget = () => {
     const [isOpen, setIsOpen] = useState(false);
     const { unansweredPolls } = usePolls();
-    const { trackEvent } = useTracking();
-
     const toggleOpen = () => {
         const newState = !isOpen;
         setIsOpen(newState);
-        if (newState) {
-            trackEvent('open_feedback_widget');
-        }
     };
 
     const hasUnanswered = unansweredPolls.length > 0;

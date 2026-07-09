@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState } from 'react';
 import { Reorder } from 'framer-motion';
 import { GripVertical, Eye, EyeOff, Edit2, Trash2, User, Ear, MapPin } from 'lucide-react';
@@ -36,20 +36,24 @@ export const PinItem: React.FC<PinItemProps> = ({ pin, onToggle, onRename, onUpd
         <Reorder.Item
             value={pin}
             onContextMenu={(e) => e.preventDefault()}
-            className={`flex items - center justify - between p - 2 rounded - md border transition - all ${pin.enabled ? 'bg-white dark:bg-neutral-700 border-gray-200 dark:border-neutral-600' : 'bg-gray-50 dark:bg-neutral-800 border-gray-100 dark:border-neutral-700 opacity-75'} `}
+            className={`group flex items-center justify-between p-2 rounded-xl border transition-all duration-200 ${
+                pin.enabled 
+                ? 'bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm border-transparent shadow-sm hover:shadow-md hover:border-violet-500/30' 
+                : 'bg-white/40 dark:bg-neutral-800/40 backdrop-blur-sm border-transparent opacity-60 hover:opacity-100'
+            }`}
         >
             <div className="flex items-center gap-2 flex-1 min-w-0">
-                <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 flex-shrink-0">
-                    <GripVertical size={16} />
+                <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <GripVertical size={14} />
                 </div>
 
                 {/* Icon Toggle */}
                 <button
                     onClick={cycleIcon}
-                    className="p-1 text-gray-500 hover:text-blue-500 rounded hover:bg-gray-100 dark:hover:bg-neutral-600 mr-1"
+                    className="p-1.5 flex-shrink-0 text-violet-500 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400 rounded-lg hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors"
                     title="Mudar Ícone"
                 >
-                    <Icon size={16} />
+                    <Icon size={14} />
                 </button>
 
                 {isEditing ? (
@@ -66,11 +70,11 @@ export const PinItem: React.FC<PinItemProps> = ({ pin, onToggle, onRename, onUpd
                             }
                         }}
                         autoFocus
-                        className="flex-1 bg-white dark:bg-neutral-900 border border-blue-500 rounded px-1 min-w-0 h-6 text-sm"
+                        className="flex-1 bg-white/50 dark:bg-neutral-900/50 border border-violet-500 rounded-lg px-2 min-w-0 h-7 text-[13px] outline-none focus:ring-2 focus:ring-violet-500/20"
                     />
                 ) : (
                     <span
-                        className="text-sm font-medium flex-1 truncate cursor-pointer"
+                        className="text-[13px] font-medium text-gray-700 dark:text-neutral-200 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors flex-1 truncate cursor-pointer ml-1"
                         onDoubleClick={() => setIsEditing(true)}
                         title={pin.name}
                     >
@@ -79,24 +83,24 @@ export const PinItem: React.FC<PinItemProps> = ({ pin, onToggle, onRename, onUpd
                 )}
             </div>
 
-            <div className="flex items-center gap-1 ml-2">
+            <div className="flex items-center gap-0.5 ml-2">
                 <button
                     onClick={() => setIsEditing(true)}
-                    className="p-1.5 text-gray-400 hover:text-blue-500 rounded hover:bg-gray-100 dark:hover:bg-neutral-600"
+                    className="p-1.5 text-gray-400 hover:text-violet-500 rounded-lg hover:bg-white dark:hover:bg-neutral-700 transition-colors opacity-0 group-hover:opacity-100"
                     title="Renomear"
                 >
                     <Edit2 size={14} />
                 </button>
                 <button
                     onClick={() => onToggle(pin)}
-                    className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-neutral-200 rounded hover:bg-gray-100 dark:hover:bg-neutral-600"
+                    className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-neutral-200 rounded-lg hover:bg-white dark:hover:bg-neutral-700 transition-colors"
                     title={pin.enabled ? "Ocultar" : "Mostrar"}
                 >
                     {pin.enabled ? <Eye size={14} /> : <EyeOff size={14} />}
                 </button>
                 <button
                     onClick={() => onDelete(pin.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-gray-100 dark:hover:bg-neutral-600"
+                    className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors opacity-0 group-hover:opacity-100"
                     title="Excluir"
                 >
                     <Trash2 size={14} />

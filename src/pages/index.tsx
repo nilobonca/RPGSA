@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useIDB } from '@/utils/indexedDB';
 import { useRouter } from 'next/router';
 import { Plus, Folder, Trash2, Edit2, Check, X, Settings } from 'lucide-react';
@@ -99,7 +99,7 @@ export default function Dashboard() {
       // create duplicate layers. `addLayer` id check handles that?
       // The check `!pMap.has(pid)` prevents duplicates IF state updates fast enough.
       // But to be safe, we only do this if we are SURE it's missing.
-      console.log("Migrating legacy projects:", actionsToPerform.length);
+
       actionsToPerform.forEach(action => action());
     }
 

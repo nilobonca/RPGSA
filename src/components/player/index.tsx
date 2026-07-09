@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+﻿import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -9,6 +9,9 @@ import {
   Volume2,
   VolumeX
 } from "lucide-react";
+import { getSharedAudioContext, resumeAudioContext } from "@/utils/audio/audioContext";
+import { Jungle } from "@/utils/audio/jungle";
+import { formatDuration } from "@/utils/time";
 import AudioPlayerClosed from "../player-closed";
 import { Players } from "@/interfaces/utils/indexedDB";
 
@@ -45,12 +48,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ DeletePlayer, Player, forcePl
     setIsClosed(!isClosed);
   }
 
-  const formatTime = (seconds: number) => {
-    if (isNaN(seconds)) return '00:00';
-    const minutes = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
+
 
   const updateLoopRangeVisual = useCallback(() => {
     setLoopUi({ start: loopStartTimeRef.current, end: loopEndTimeRef.current });
@@ -290,10 +288,14 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ DeletePlayer, Player, forcePl
               </div>
 
               <div className="flex justify-between text-sm text-muted-foreground">
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration)}</span>
+                <span>{formatDuration(currentTime)}</span>
+                <span>{formatDuration(duration)}</span>
               </div>
-              {`Loop: ${formatTime(loopUi.start)} - ${formatTime(loopUi.end)}`}
+              {isCustomLooping && (
+                <div className="text-[10px] text-gray-500 mt-1">
+                  {`Loop: ${formatDuration(loopUi.start)} - ${formatDuration(loopUi.end)}`}
+                </div>
+              )}
 
             </div>
             <div className="flex items-center gap-4 justify-between mt-2">

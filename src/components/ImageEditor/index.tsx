@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, RotateCw, Maximize2, FlipHorizontal, FlipVertical, RefreshCw, Check } from 'lucide-react';
 import { ActiveImage } from '@/interfaces/utils/indexedDB';
 
@@ -95,7 +95,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ image, onUpdate, onClose }) =
             {/* Image Name */}
             <div className="mb-4 p-2 bg-gray-50 rounded">
                 <p className="text-xs text-gray-600 truncate" title={image.image.name}>
-                    📷 {image.image.name}
+                    ðŸ“· {image.image.name}
                 </p>
             </div>
 
