@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useIDB } from '@/utils/indexedDB';
-import { getSharedAudioContext } from '@/utils/audio/audioContext';
+import { getSharedAudioContext, resumeAudioContext } from '@/utils/audio/audioContext';
 import { ActiveGlobalTrack } from '@/interfaces/utils/indexedDB';
 import { useCanvasGlobalStore } from '@/store/canvasStore';
 import { useThemeStore } from '@/store/themeStore';
+
 interface GlobalAudioPlayerProps {
     activeGlobalTracks: ActiveGlobalTrack[];
     isPreviewInstance?: boolean;
@@ -14,40 +15,16 @@ export default function GlobalAudioPlayer({ activeGlobalTracks, isPreviewInstanc
     const { savedAudios } = useIDB();
     const masterVolume = useCanvasGlobalStore(state => state.masterVolume);
     const audioRefs = useRef<{ [id: string]: HTMLAudioElement }>({});
+    const gainNodesRefs = useRef<{ [id: string]: GainNode }>({});
+    const analyserNodesRefs = useRef<{ [id: string]: AnalyserNode }>({});
     const [pulseIntensity, setPulseIntensity] = useState(0);
-    const decodedBuffers = useRef<{ [id: string]: AudioBuffer }>({});
     const animFrameRef = useRef<number | null>(null);
     const audioVizEnabled = useThemeStore(state => state.audioVizEnabled);
     const audioVizColor = useThemeStore(state => state.audioVizColor);
     const audioVizIntensity = useThemeStore(state => state.audioVizIntensity);
     const hasAnyPlaying = activeGlobalTracks.some(t => t.isPlaying);
 
-    // Decode audio File into AudioBuffer for direct waveform analysis
-    const decodeTrackAudio = useCallback(async (trackId: string, file: File) => {
-        if (decodedBuffers.current[trackId]) return;
-        try {
-            const ctx = getSharedAudioContext();
-            if (!ctx) return;
-            const arrayBuffer = await file.arrayBuffer();
-            const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-            decodedBuffers.current[trackId] = audioBuffer;
-
-        } catch (e) {
-            console.error('[AudioViz] Failed to decode audio buffer:', e);
-        }
-    }, []);
-
-    // Decode all active tracks
-    useEffect(() => {
-        activeGlobalTracks.forEach(track => {
-            const audioData = savedAudios.find(a => a.id === track.linkedAudioId || a.id === Number(track.linkedAudioId));
-            if (audioData?.file && !decodedBuffers.current[track.id]) {
-                decodeTrackAudio(String(track.id), audioData.file);
-            }
-        });
-    }, [activeGlobalTracks, savedAudios, decodeTrackAudio]);
-
-    // Animation loop: read waveform from decoded buffer at current playback position
+    // Animation loop: read waveform from AnalyserNode
     useEffect(() => {
         if (!hasAnyPlaying) {
             setPulseIntensity(0);
@@ -58,31 +35,25 @@ export default function GlobalAudioPlayer({ activeGlobalTracks, isPreviewInstanc
             animFrameRef.current = requestAnimationFrame(tick);
 
             let maxAmplitude = 0;
+            const dataArray = new Uint8Array(1024); // fftSize is 2048, frequencyBinCount is 1024
 
             activeGlobalTracks.forEach(track => {
                 if (!track.isPlaying) return;
-                const audioEl = audioRefs.current[track.id];
-                const buffer = decodedBuffers.current[track.id];
-                if (!audioEl || !buffer) return;
+                const analyser = analyserNodesRefs.current[track.id];
+                if (!analyser) return;
 
-                const currentTime = audioEl.currentTime;
-                const sampleRate = buffer.sampleRate;
-                const channelData = buffer.getChannelData(0); // mono or left channel
-                const sampleIndex = Math.floor(currentTime * sampleRate);
+                analyser.getByteFrequencyData(dataArray);
 
-                // Read a window of ~2048 samples around current position
-                const windowSize = 2048;
-                const start = Math.max(0, sampleIndex - windowSize / 2);
-                const end = Math.min(channelData.length, sampleIndex + windowSize / 2);
-
-                let rms = 0;
-                for (let i = start; i < end; i++) {
-                    rms += channelData[i] * channelData[i];
+                let sum = 0;
+                // Only read lower frequencies (bass/beats) for better pulsing
+                const bassBins = Math.min(dataArray.length, 150); 
+                for (let i = 0; i < bassBins; i++) {
+                    sum += dataArray[i];
                 }
-                rms = Math.sqrt(rms / (end - start));
+                const average = sum / bassBins; // 0 to 255
 
-                // RMS of music is typically 0.05-0.3, scale up
-                const amplitude = Math.min(1, rms * 4);
+                // scale up so that an average of ~60 reaches amplitude 1
+                const amplitude = Math.min(1, average / 60);
                 if (amplitude > maxAmplitude) maxAmplitude = amplitude;
             });
 
@@ -100,9 +71,11 @@ export default function GlobalAudioPlayer({ activeGlobalTracks, isPreviewInstanc
         const interval = setInterval(() => {
             activeGlobalTracks.forEach((track) => {
                 const audioElement = audioRefs.current[track.id];
+                const gainNode = gainNodesRefs.current[track.id];
                 if (!audioElement) return;
 
                 if (track.isPlaying && audioElement.paused) {
+                    resumeAudioContext();
                     audioElement.play().catch(e => {
                         if (e.name !== 'AbortError') console.error(e);
                     });
@@ -112,23 +85,34 @@ export default function GlobalAudioPlayer({ activeGlobalTracks, isPreviewInstanc
 
                 audioElement.loop = true;
 
+                let targetVolume = 0.0001; // Avoid exact 0 so browser doesn't sleep the Web Audio branch
                 const uiAudioEl = document.getElementById(`gm-audio-${track.id}`) as HTMLAudioElement | null;
                 if (uiAudioEl) {
                     if (Math.abs(audioElement.currentTime - uiAudioEl.currentTime) > 0.3) {
                         audioElement.currentTime = uiAudioEl.currentTime;
                     }
-                    audioElement.volume = 0;
+                    targetVolume = 0.0001;
                 } else {
                     if (isHiddenReal) {
-                        audioElement.volume = 0;
+                        targetVolume = 0.0001;
                     } else {
-                        audioElement.volume = Math.max(0, Math.min(1, track.volume * masterVolume));
+                        targetVolume = Math.max(0.0001, Math.min(1, track.volume * masterVolume));
                     }
+                }
+                
+                if (gainNode) {
+                    gainNode.gain.value = targetVolume;
+                    // Do not mutate audioElement.volume as it may silence the MediaElementAudioSourceNode in some browsers
+                    // rely entirely on gainNode for volume control
+                    // However, we ensure it's at 1 so the source node gets the full signal
+                    if (audioElement.volume !== 1) audioElement.volume = 1;
+                } else {
+                    audioElement.volume = targetVolume;
                 }
             });
         }, 100);
         return () => clearInterval(interval);
-    }, [activeGlobalTracks, masterVolume]);
+    }, [activeGlobalTracks, masterVolume, isHiddenReal]);
 
     // Compute glow from state and settings
     const blurPx = Math.round(pulseIntensity * 400 * audioVizIntensity);
@@ -149,12 +133,44 @@ export default function GlobalAudioPlayer({ activeGlobalTracks, isPreviewInstanc
                             ref={(el) => {
                                 if (el) {
                                     audioRefs.current[track.id] = el;
+                                    const anyEl = el as any;
+                                    if (!anyEl.__webAudioConnected) {
+                                        const ctx = getSharedAudioContext();
+                                        if (ctx) {
+                                            try {
+                                                const sourceNode = ctx.createMediaElementSource(el);
+                                                const analyser = ctx.createAnalyser();
+                                                analyser.fftSize = 2048;
+                                                const gainNode = ctx.createGain();
+                                                gainNode.gain.value = 0;
+
+                                                sourceNode.connect(analyser);
+                                                analyser.connect(gainNode);
+                                                gainNode.connect(ctx.destination);
+
+                                                anyEl.__webAudioConnected = true;
+                                                anyEl.__analyser = analyser;
+                                                anyEl.__gainNode = gainNode;
+                                                
+                                                analyserNodesRefs.current[track.id] = analyser;
+                                                gainNodesRefs.current[track.id] = gainNode;
+                                            } catch (e) {
+                                                console.error('[AudioViz] Failed to connect analyser:', e);
+                                            }
+                                        }
+                                    } else {
+                                        if (anyEl.__analyser) analyserNodesRefs.current[track.id] = anyEl.__analyser;
+                                        if (anyEl.__gainNode) gainNodesRefs.current[track.id] = anyEl.__gainNode;
+                                    }
                                 } else {
                                     delete audioRefs.current[track.id];
+                                    delete analyserNodesRefs.current[track.id];
+                                    delete gainNodesRefs.current[track.id];
                                 }
                             }}
                             src={audioData.url}
                             preload="auto"
+                            crossOrigin="anonymous"
                         />
                     );
                 })}
