@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { getSharedAudioContext, resumeAudioContext } from '@/utils/audio/audioContext';
-import { Activity, Play, Volume2, LogOut, Wifi, MessageSquare, Dices, Users } from 'lucide-react';
+import { Activity, Play, Volume2, VolumeX, LogOut, Wifi, MessageSquare, Dices, Users } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { ChatMessage } from '@/interfaces/chat';
 import { SessionChat } from '@/components/Chat/SessionChat';
@@ -19,6 +19,24 @@ export default function ListenerSession() {
     const [ping, setPing] = useState<number | null>(null);
     const [showSpectrogram, setShowSpectrogram] = useState(true);
     const [activeCount, setActiveCount] = useState(0);
+    const [guestVolume, setGuestVolume] = useState<number>(1.0);
+    const [isMuted, setIsMuted] = useState<boolean>(false);
+
+    const handleGuestVolumeChange = (newVolume: number) => {
+        setGuestVolume(newVolume);
+        if (newVolume > 0 && isMuted) setIsMuted(false);
+        if (audioElRef.current) {
+            audioElRef.current.volume = isMuted ? 0 : newVolume;
+        }
+    };
+
+    const toggleMute = () => {
+        const nextMuted = !isMuted;
+        setIsMuted(nextMuted);
+        if (audioElRef.current) {
+            audioElRef.current.volume = nextMuted ? 0 : guestVolume;
+        }
+    };
 
     // Chat State
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -468,6 +486,7 @@ export default function ListenerSession() {
                         // 1. Play the stream using the hidden audio element
                         if (audioElRef.current) {
                             audioElRef.current.srcObject = remoteStream;
+                            audioElRef.current.volume = isMuted ? 0 : guestVolume;
                             audioElRef.current.play().catch(e => console.error("Play stream failed:", e));
                         }
 
@@ -578,7 +597,7 @@ export default function ListenerSession() {
     }, [isClickerActive, gameOver, timeLeft, clickerConfig]);
 
     return (
-        <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans relative overflow-hidden">
+        <div className="h-screen max-h-screen overflow-y-auto overflow-x-hidden bg-neutral-950 text-neutral-100 flex flex-col font-sans relative">
             <Head>
                 <title>Sessão de Áudio Compartilhada</title>
                 <meta name="description" content="Conecte-se para ouvir áudios espaciais 3D em tempo real do Narrador." />
@@ -621,6 +640,8 @@ export default function ListenerSession() {
                                     className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all text-sm"
                                 />
                             </div>
+
+
 
                             <button
                                 type="submit"
@@ -711,13 +732,13 @@ export default function ListenerSession() {
 
                     {/* Immersive Center Content */}
                     <div className="flex-1 flex flex-col justify-center items-center py-8">
-                        <div className="text-center max-w-md mb-8">
-                            <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 mx-auto mb-4 animate-pulse">
-                                <Volume2 size={36} />
+                        <div className="text-center max-w-md mb-8 w-full bg-neutral-900/60 border border-neutral-800 p-6 rounded-2xl shadow-xl backdrop-blur-sm">
+                            <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 mx-auto mb-3 animate-pulse">
+                                <Volume2 size={32} />
                             </div>
-                            <h2 className="text-xl font-bold text-white tracking-tight mb-2">Transmissão Sintonizada</h2>
+                            <h2 className="text-xl font-bold text-white tracking-tight mb-1">Transmissão Sintonizada</h2>
                             <p className="text-xs text-neutral-400 leading-relaxed">
-                                Você está ouvindo o áudio posicional configurado pelo Narrador. Ajuste o balanço de seus fones de ouvido para imersão total.
+                                Transmissão de áudio posicional do Narrador em tempo real. Ajuste seu volume pelo controle flutuante.
                             </p>
                         </div>
 
@@ -784,6 +805,58 @@ export default function ListenerSession() {
 
                     <div className="text-[10px] text-neutral-600 text-center pt-4 select-none">
                         ID Ouvinte: {listenerId} • Visual Sound Design Multiplayer Engine v1.0
+                    </div>
+
+                    {/* Fixed Floating Volume Button in Bottom Right Corner */}
+                    <div className="fixed bottom-6 right-6 z-[100] group flex items-center flex-row-reverse gap-3 select-none">
+                        {/* Floating Trigger Button */}
+                        <button
+                            type="button"
+                            onClick={toggleMute}
+                            className={`w-12 h-12 rounded-full flex items-center justify-center border shadow-2xl backdrop-blur-md transition-all cursor-pointer ${
+                                isMuted || guestVolume === 0
+                                    ? 'bg-rose-950/90 border-rose-500/40 text-rose-400 hover:bg-rose-900'
+                                    : 'bg-neutral-900/90 border-neutral-700/80 text-emerald-400 hover:border-emerald-500/50 hover:bg-neutral-800'
+                            }`}
+                            title={isMuted ? 'Desmutar' : 'Volume Master'}
+                        >
+                            {isMuted || guestVolume === 0 ? <VolumeX size={22} /> : <Volume2 size={22} />}
+                        </button>
+
+                        {/* Hover / Focus Slider Box */}
+                        <div className="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-all duration-200 ease-out transform translate-x-2 group-hover:translate-x-0 group-focus-within:translate-x-0 bg-neutral-900/95 border border-neutral-800 rounded-2xl p-3 shadow-2xl backdrop-blur-xl flex items-center gap-3 w-64">
+                            <button
+                                type="button"
+                                onClick={toggleMute}
+                                className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+                                    isMuted
+                                        ? 'bg-red-500/20 text-red-400'
+                                        : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                                }`}
+                                title={isMuted ? 'Desmutar' : 'Mutar'}
+                            >
+                                {isMuted || guestVolume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                            </button>
+
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={isMuted ? 0 : guestVolume}
+                                onChange={(e) => handleGuestVolumeChange(parseFloat(e.target.value))}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onTouchStart={(e) => e.stopPropagation()}
+                                onTouchMove={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => e.stopPropagation()}
+                                className="flex-1 accent-emerald-500 h-2 bg-neutral-800 rounded-lg cursor-pointer touch-none"
+                            />
+
+                            <span className="text-xs font-mono font-bold text-emerald-400 w-10 text-right">
+                                {isMuted ? 'OFF' : `${Math.round(guestVolume * 100)}%`}
+                            </span>
+                        </div>
                     </div>
 
                     {/* Clicker Minigame Overlay */}

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
@@ -26,7 +26,9 @@ export default function ContextMenu({ x, y, onClose, options }: ContextMenuProps
     const [position, setPosition] = useState({ x, y });
     const [activeSubMenuIndex, setActiveSubMenuIndex] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [highlightedIndex, setHighlightedIndex] = useState(0);
     const [openSubMenuToLeft, setOpenSubMenuToLeft] = useState(false);
+    const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
     useEffect(() => {
         if (menuRef.current) {
@@ -97,7 +99,18 @@ export default function ContextMenu({ x, y, onClose, options }: ContextMenuProps
     // Reset search when submenu changes
     useEffect(() => {
         setSearchTerm('');
+        setHighlightedIndex(0);
     }, [activeSubMenuIndex]);
+
+    useEffect(() => {
+        setHighlightedIndex(0);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        if (itemRefs.current[highlightedIndex]) {
+            itemRefs.current[highlightedIndex]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }, [highlightedIndex]);
 
     // Use a portal to render the menu at the document root level
     if (typeof document === 'undefined') return null;
@@ -161,6 +174,28 @@ export default function ContextMenu({ x, y, onClose, options }: ContextMenuProps
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             onClick={(e) => e.stopPropagation()}
+                                            onKeyDown={(e) => {
+                                                const filteredOptions = option.subMenu!.filter(subOption =>
+                                                    !option.searchable ||
+                                                    subOption.label.toLowerCase().includes(searchTerm.toLowerCase())
+                                                );
+                                                if (filteredOptions.length === 0) return;
+
+                                                if (e.key === 'ArrowDown') {
+                                                    e.preventDefault();
+                                                    setHighlightedIndex(prev => (prev + 1) % filteredOptions.length);
+                                                } else if (e.key === 'ArrowUp') {
+                                                    e.preventDefault();
+                                                    setHighlightedIndex(prev => (prev - 1 + filteredOptions.length) % filteredOptions.length);
+                                                } else if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    const selected = filteredOptions[highlightedIndex];
+                                                    if (selected && !selected.disabled) {
+                                                        selected.onClick();
+                                                        onClose();
+                                                    }
+                                                }
+                                            }}
                                             className="w-full pl-8 pr-3 py-1.5 text-sm bg-black/5 dark:bg-white/5 rounded-md border border-transparent focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 text-gray-900 dark:text-gray-100 transition-all outline-none"
                                             autoFocus
                                         />
@@ -181,7 +216,9 @@ export default function ContextMenu({ x, y, onClose, options }: ContextMenuProps
                                             </div>
                                         ) : (
                                             <button
+                                                ref={el => { itemRefs.current[subIndex] = el; }}
                                                 disabled={subOption.disabled}
+                                                onMouseEnter={() => setHighlightedIndex(subIndex)}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     if (subOption.disabled) return;
@@ -191,7 +228,9 @@ export default function ContextMenu({ x, y, onClose, options }: ContextMenuProps
                                                 className={`w-full text-left px-3 py-2.5 mx-1 transition-all duration-200 flex items-center gap-3 text-sm rounded-lg touch-manipulation shrink-0 relative group
                                             ${subOption.disabled
                                                         ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-500'
-                                                        : 'hover:bg-black/5 dark:hover:bg-white/10 active:scale-[0.98] text-gray-700 dark:text-neutral-200 hover:text-gray-900 dark:hover:text-white'
+                                                        : highlightedIndex === subIndex
+                                                            ? 'bg-black/10 dark:bg-white/20 text-gray-900 dark:text-white scale-[0.98]'
+                                                            : 'hover:bg-black/5 dark:hover:bg-white/10 active:scale-[0.98] text-gray-700 dark:text-neutral-200 hover:text-gray-900 dark:hover:text-white'
                                                     }`}
                                                 style={{ width: 'calc(100% - 8px)' }}
                                             >

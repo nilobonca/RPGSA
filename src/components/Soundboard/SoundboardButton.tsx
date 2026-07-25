@@ -1,7 +1,9 @@
-﻿import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { SoundboardItem, Audios } from '@/interfaces/utils/indexedDB';
-import { RotateCcw, Square, Play, Repeat, Settings, X } from 'lucide-react';
+import { RotateCcw, Square, Play, Repeat, Settings, X, Scissors } from 'lucide-react';
 import { playSoundboardAudio, stopSoundboardAudio, activeSoundboardAudios } from './activeAudios';
+import { useIDB } from '@/utils/indexedDB';
+import { useAudioEditorStore } from '@/store/audioEditorStore';
 
 interface SoundboardButtonProps {
     item: SoundboardItem;
@@ -28,6 +30,7 @@ export const SoundboardButton: React.FC<SoundboardButtonProps> = ({
     const [inputValue, setInputValue] = useState(item.name);
     const [isPlaying, setIsPlaying] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
+    const { saveAudio } = useIDB();
 
     // Poll playing state from the global map
     useEffect(() => {
@@ -57,7 +60,17 @@ export const SoundboardButton: React.FC<SoundboardButtonProps> = ({
         if (isRenaming || showSettings) return;
 
         if (audio && audio.url) {
-            playSoundboardAudio(item.id, audio.url, item.playbackMode || 'overlap', item.pitch || 1.0, item.volume, audio.id, item.filterType);
+            playSoundboardAudio(
+                item.id, 
+                audio.url, 
+                item.playbackMode || 'overlap', 
+                item.pitch || 1.0, 
+                item.volume, 
+                audio.id, 
+                item.filterType, 
+                item.trimStart, 
+                item.trimEnd
+            );
         }
         onClick();
     };
@@ -71,7 +84,17 @@ export const SoundboardButton: React.FC<SoundboardButtonProps> = ({
         e.stopPropagation();
         if (audio && audio.url) {
             stopSoundboardAudio(item.id);
-            playSoundboardAudio(item.id, audio.url, 'restart', item.pitch || 1.0, item.volume, audio.id, item.filterType);
+            playSoundboardAudio(
+                item.id, 
+                audio.url, 
+                'restart', 
+                item.pitch || 1.0, 
+                item.volume, 
+                audio.id, 
+                item.filterType, 
+                item.trimStart, 
+                item.trimEnd
+            );
         }
     };
 
@@ -99,7 +122,6 @@ export const SoundboardButton: React.FC<SoundboardButtonProps> = ({
     };
 
     const volumePercent = Math.round((item.volume ?? 1.0) * 100);
-    const filterLabel = FILTER_OPTIONS.find(f => f.value === (item.filterType ?? 'none'))?.label ?? 'Nenhum';
 
     return (
         <div className="relative flex flex-col" style={{ width: 112 }}>
@@ -127,7 +149,7 @@ export const SoundboardButton: React.FC<SoundboardButtonProps> = ({
                     e.dataTransfer.setData('itemId', item.id);
                     e.dataTransfer.effectAllowed = 'copy';
                 }}
-                title={audio ? `${audio.name} â€” clique para tocar` : 'Arraste um áudio aqui'}
+                title={audio ? `${audio.name} — clique para tocar` : 'Arraste um áudio aqui'}
             >
                 {/* Playing indicator */}
                 {isPlaying && (
@@ -138,24 +160,24 @@ export const SoundboardButton: React.FC<SoundboardButtonProps> = ({
                 {audio && !isRenaming && (
                     <button
                         className="absolute top-1.5 right-1.5 w-7 h-7 flex items-center justify-center rounded-lg bg-black/5 dark:bg-white/5 hover:bg-white dark:hover:bg-neutral-700 text-gray-500 dark:text-neutral-300 opacity-0 group-hover:opacity-100 transition-all z-10"
-                        onClick={(e) => { e.stopPropagation(); setShowSettings(v => !v); }}
-                        title="Configurações"
+                        onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); }}
+                        title="Configurações do botão"
                     >
                         {showSettings ? <X size={14} /> : <Settings size={14} />}
                     </button>
                 )}
 
-                {/* Label */}
+                {/* Title or Input */}
                 {isRenaming ? (
                     <input
                         ref={inputRef}
+                        type="text"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        className="w-full text-center text-xs font-medium bg-white/50 dark:bg-neutral-900/50 text-black dark:text-white border border-violet-500 rounded-lg px-2 py-1 outline-none mt-2 focus:ring-2 focus:ring-violet-500/20"
                         onBlur={handleRenameSubmit}
                         onKeyDown={handleKeyDown}
                         onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
+                        className="w-full text-center text-xs bg-white dark:bg-neutral-800 border border-violet-500 rounded px-1 py-0.5 outline-none font-medium text-gray-800 dark:text-white"
                     />
                 ) : (
                     <span className={`text-[11px] text-center font-semibold break-words w-full overflow-hidden px-1 ${isPlaying ? 'text-blue-800 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>
@@ -257,6 +279,27 @@ export const SoundboardButton: React.FC<SoundboardButtonProps> = ({
                                 </button>
                             ))}
                         </div>
+                    </div>
+
+                    {/* Cut / Edit Audio Button */}
+                    <div className="pt-1 border-t border-gray-200 dark:border-neutral-700">
+                        <button
+                            onClick={() => {
+                                setShowSettings(false);
+                                useAudioEditorStore.getState().openEditor({
+                                    audio,
+                                    initialTrimStart: item.trimStart || 0,
+                                    initialTrimEnd: item.trimEnd,
+                                    onSaveTrimRange: (trimStart, trimEnd) => {
+                                        onUpdate?.({ trimStart, trimEnd });
+                                    }
+                                });
+                            }}
+                            className="w-full py-1.5 px-2 bg-blue-50 dark:bg-neutral-700 hover:bg-blue-100 dark:hover:bg-neutral-600 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                            <Scissors size={14} />
+                            Editar / Cortar Áudio
+                        </button>
                     </div>
                 </div>
             )}

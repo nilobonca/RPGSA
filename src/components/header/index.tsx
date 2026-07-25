@@ -640,6 +640,7 @@ const HeaderCab: React.FC<HeaderProps> = ({
         maxHeight: '80vh',
         x: position.x,
         y: position.y,
+        zIndex: 500,
       }}
       drag
       dragListener={false}

@@ -5,6 +5,7 @@ import { Players, ActiveArea, Audios } from '@/interfaces/utils/indexedDB';
 import { useViewportResize } from '@/hooks/useViewportResize';
 import { useCanvasGlobalStore } from '@/store/canvasStore';
 import AudioPlayerList from '../player-list';
+import { useAudioEditorStore } from '@/store/audioEditorStore';
 
 interface ActivePlayersMenuProps {
     activePlayers: Players[];
@@ -160,6 +161,7 @@ const ActivePlayersMenu: React.FC<ActivePlayersMenuProps> = ({
                                 audio={player.audio}
                                 onDelete={() => onDeletePlayer && onDeletePlayer(player.id, player.type)}
                                 onDuplicate={() => { }} // Duplication not implemented for active players yet
+                                onEdit={(audio) => useAudioEditorStore.getState().openEditor({ audio })}
                                 forcePlay={player.type === 'area' ? activeAreaIds.has(player.id) : false}
                                 proximityFactor={proximityVolumes.get(player.audio.id) ?? 1}
                                 spatialPan={spatialPans.get(player.audio.id) ?? 0}

@@ -41,6 +41,7 @@ import GlobalAudioPlayer from "@/components/GlobalAudioPlayer";
 import { CanvasSoundboardItem } from "@/components/Soundboard/CanvasSoundboardItem";
 import ActivePlayersMenu from "@/components/ActivePlayersMenu";
 import BatchAudioUploadModal from '@/components/BatchAudioUploadModal';
+import { GlobalAudioEditorModal } from '@/components/AudioEditorModal/GlobalAudioEditorModal';
 import { useRouter } from "next/router";
 import BottomToolbar from "@/components/Canva/BottomToolbar";
 import NoteItem from "@/components/Canva/itens/note-item";
@@ -2267,6 +2268,8 @@ return (
           </CanvasContainer>
         </div>
 
+
+        <GlobalAudioEditorModal />
 
         {/* Context Menu */}
         <div className={clsx("transition-opacity duration-500", isTheaterMode ? "opacity-0 pointer-events-none" : "opacity-100")}>

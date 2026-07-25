@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { getPolygonCentroid, isPointInPolygon, distanceToSegment, getClosestPointOnSegment } from '@/utils/geometry';
@@ -11,6 +11,7 @@ import AudioPlayerList from '@/components/player-list';
 import { useCanvasSelection } from '@/hooks/useCanvasSelection';
 import { handleDeepSelectCycle } from '@/utils/deep-select';
 import { useThemeStore } from '@/store/themeStore';
+import { useAudioEditorStore } from '@/store/audioEditorStore';
 
 interface EditableAreaProps {
     area: ActiveArea;
@@ -656,6 +657,7 @@ export default function EditableArea({ area, onUpdate, isSelected, onSelect, onR
                                 audio={linkedAudio}
                                 onDelete={() => { }} // No-op for delete in this context
                                 onDuplicate={() => { }} // No-op for duplicate
+                                onEdit={(audio) => useAudioEditorStore.getState().openEditor({ audio })}
                                 pitch={area.pitch ?? 1.0}
                                 onPitchChange={(newPitch) => onUpdate({ ...area, pitch: newPitch })}
                                 volume={area.volume ?? 1.0}

@@ -1,4 +1,4 @@
-﻿
+
 export interface Audios {
     id: number;
     name: string;
@@ -8,6 +8,8 @@ export interface Audios {
     order?: number;
     publicUrl?: string;
     folderId?: string;
+    trimStart?: number;
+    trimEnd?: number;
 }
 
 export interface Players {
@@ -132,6 +134,8 @@ export interface SoundboardItem {
   audioRotation?: number; // 0-360 degrees
     filterType?: 'none' | 'lowpass' | 'wall' | 'telephone';
     spatialPan?: number; // -1 to 1 (left to right) // -1 to 1 (front to back)
+    trimStart?: number;
+    trimEnd?: number;
 }
 
 export interface ActiveSoundboardItem {

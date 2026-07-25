@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useDragControls } from 'framer-motion';
-import { Plus, X, GripHorizontal, Globe, Mic } from 'lucide-react';
+import { Plus, X, GripHorizontal, Globe, Mic, Scissors } from 'lucide-react';
 import { useIDB } from '@/utils/indexedDB';
 import { useCanvasGlobalStore } from '@/store/canvasStore';
 import { ActiveGlobalTrack } from '@/interfaces/utils/indexedDB';
@@ -8,6 +8,7 @@ import { useViewportResize } from '@/hooks/useViewportResize';
 import AudioPlayerList from '../player-list';
 import MicPlayerList from '../MicPlayerList';
 import { v4 as uuidv4 } from 'uuid';
+import { useAudioEditorStore } from '@/store/audioEditorStore';
 
 interface GlobalAudioMenuProps {
     projectId: string;
@@ -147,13 +148,21 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
                             <h3 className="text-xs font-medium text-gray-500 dark:text-neutral-400 mb-2 uppercase tracking-wider">Selecione um áudio</h3>
                             <div className="space-y-1">
                                 {savedAudios.map(audio => (
-                                    <button
-                                        key={audio.id}
-                                        onClick={() => handleAddTrack(audio.id)}
-                                        className="w-full text-left px-2 py-1.5 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-200 dark:hover:bg-neutral-700 rounded truncate transition-colors"
-                                    >
-                                        {audio.name}
-                                    </button>
+                                    <div key={audio.id} className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => handleAddTrack(audio.id)}
+                                            className="flex-1 text-left px-3 py-2 text-sm text-gray-700 dark:text-neutral-200 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded transition-colors truncate"
+                                        >
+                                            {audio.name}
+                                        </button>
+                                        <button
+                                            onClick={() => useAudioEditorStore.getState().openEditor({ audio })}
+                                            className="p-2 text-gray-400 hover:text-violet-500 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded transition-colors"
+                                            title="Editar áudio"
+                                        >
+                                            <Scissors size={14} />
+                                        </button>
+                                    </div>
                                 ))}
                                 {savedAudios.length === 0 && (
                                     <p className="text-xs text-gray-500 italic">Nenhum áudio salvo.</p>
@@ -197,6 +206,7 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
                                                 audio={audio!}
                                                 onDelete={() => deleteGlobalTrackPersisted(track.id)}
                                                 onDuplicate={() => {}}
+                                                onEdit={(audio) => useAudioEditorStore.getState().openEditor({ audio })}
                                                 forcePlay={track.isPlaying}
                                                 proximityFactor={1}
                                                 spatialPan={track.spatialPan || 0}

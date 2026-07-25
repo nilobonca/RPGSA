@@ -1,4 +1,4 @@
-﻿import { Audios } from '@/interfaces/utils/indexedDB';
+import { Audios } from '@/interfaces/utils/indexedDB';
 import { getSharedAudioContext } from '@/utils/audio/audioContext';
 import { Jungle } from '@/utils/audio/jungle';
 import { useCanvasGlobalStore } from '@/store/canvasStore';
@@ -28,16 +28,19 @@ useCanvasGlobalStore.subscribe((state) => {
     }
 });
 
-let onPlayCallback: ((payload: any) => void) | null = null;
-let onStopCallback: ((id: string) => void) | null = null;
+export type PlaySoundboardCallback = ((payload: any) => void) | null;
+export type StopSoundboardCallback = ((id: string) => void) | null;
 
-export const setPlaySoundboardCallback = (cb: typeof onPlayCallback) => {
+let onPlayCallback: PlaySoundboardCallback = null;
+let onStopCallback: StopSoundboardCallback = null;
+
+export function setPlaySoundboardCallback(cb: PlaySoundboardCallback) {
     onPlayCallback = cb;
-};
+}
 
-export const setStopSoundboardCallback = (cb: typeof onStopCallback) => {
+export function setStopSoundboardCallback(cb: StopSoundboardCallback) {
     onStopCallback = cb;
-};
+}
 
 export const stopSoundboardAudio = (id: string) => {
     const list = activeSoundboardAudios.get(id);
@@ -68,7 +71,7 @@ export const stopSoundboardAudio = (id: string) => {
     }
 };
 
-export const playSoundboardAudio = (id: string, audioUrl: string, mode: 'restart' | 'overlap', pitch?: number, volume?: number, audioId?: number, filterType?: 'none' | 'lowpass' | 'wall' | 'telephone') => {
+export const playSoundboardAudio = (id: string, audioUrl: string, mode: 'restart' | 'overlap', pitch?: number, volume?: number, audioId?: number, filterType?: 'none' | 'lowpass' | 'wall' | 'telephone', trimStart?: number, trimEnd?: number) => {
     if (mode === 'restart') {
         stopSoundboardAudio(id);
     }
@@ -78,6 +81,21 @@ export const playSoundboardAudio = (id: string, audioUrl: string, mode: 'restart
     const masterVolume = useCanvasGlobalStore.getState().masterVolume;
     sound.volume = baseVolume * masterVolume;
     let jungleInstance: Jungle | undefined;
+
+    if (trimStart && trimStart > 0) {
+        sound.currentTime = trimStart;
+    }
+
+    if (trimEnd && trimEnd > 0) {
+        const handleTimeUpdate = () => {
+            if (sound.currentTime >= trimEnd) {
+                sound.pause();
+                sound.dispatchEvent(new Event('ended'));
+                sound.removeEventListener('timeupdate', handleTimeUpdate);
+            }
+        };
+        sound.addEventListener('timeupdate', handleTimeUpdate);
+    }
 
     const ctx = getSharedAudioContext();
     let filterNode: BiquadFilterNode | undefined;

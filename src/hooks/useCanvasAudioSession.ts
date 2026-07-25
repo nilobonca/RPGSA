@@ -1,8 +1,9 @@
-﻿import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { ActivePin, Audios } from '@/interfaces/utils/indexedDB';
 import { Jungle } from '@/utils/audio/jungle';
 import { getSharedAudioContext } from '@/utils/audio/audioContext';
 import { setPlaySoundboardCallback, setStopSoundboardCallback } from '@/components/Soundboard/activeAudios';
+import { useCanvasGlobalStore } from '@/store/canvasStore';
 
 export const useCanvasAudioSession = (
   projectId: string | null,
@@ -298,8 +299,9 @@ export const useCanvasAudioSession = (
         if (listenerId === 'local') return; // Local is already played by playSoundboardAudio
 
         try {
+          const guestMaster = (useCanvasGlobalStore.getState() as any).guestMasterVolume ?? 1.0;
           const sound = new Audio(url);
-          sound.volume = volume !== undefined ? volume : 1.0;
+          sound.volume = (volume !== undefined ? volume : 1.0) * guestMaster;
           sound.crossOrigin = 'anonymous';
 
           const source = ctx.createMediaElementSource(sound);
@@ -365,7 +367,7 @@ export const useCanvasAudioSession = (
       setPlaySoundboardCallback(null);
       setStopSoundboardCallback(null);
     };
-  }, [isSessionActive, getOrCreateListenerGraph, setPlaySoundboardCallback, setStopSoundboardCallback]);
+  }, [isSessionActive, getOrCreateListenerGraph]);
 
   const handleLocateListener = (listenerId: string) => {
     // Basic implementation since map centering isn't explicitly defined here

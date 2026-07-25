@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Volume2,  
   Plus, Hexagon, MapPin, Type, LayoutGrid, Eye, Edit2, 
-  Music, Filter, Check, Palette, Trash2, User, Ear 
+  Music, Filter, Check, Palette, Trash2, User, Ear, Scissors
  } from 'lucide-react';
 import ContextMenu from '@/components/ContextMenu';
+import { useAudioEditorStore } from '@/store/audioEditorStore';
 
 
 const LocalColorInput = ({ value, onChange, className }: { value: string, onChange: (val: string) => void, className?: string }) => {
@@ -509,6 +510,19 @@ export function ProjectCanvasContextMenu({
           { label: 'Excluir Item', onClick: () => { if (contextMenu.itemId) deleteSoundboardItemPersisted(contextMenu.itemId); }, icon: <Trash2 size={18} /> }
         ] : []),
         ...(contextMenu.type === 'asset-audio' ? [
+          {
+            label: 'Editar Áudio',
+            icon: <Scissors size={18} />,
+            onClick: () => {
+              if (contextMenu.itemId) {
+                const audio = savedAudios.find(a => a.id === Number(contextMenu.itemId));
+                if (audio) {
+                  useAudioEditorStore.getState().openEditor({ audio });
+                }
+              }
+              setContextMenu(null);
+            }
+          },
           {
             label: 'Renomear',
             icon: <Edit2 size={18} />,

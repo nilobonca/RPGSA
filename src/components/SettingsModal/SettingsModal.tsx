@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useThemeStore } from '@/store/themeStore';
 import { X, Check, DownloadCloud, UploadCloud, MessageSquareText, Palette, Monitor, Database, Keyboard, Gamepad2 } from 'lucide-react';
@@ -127,6 +127,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [listeningFor, setBinding]);
+
+  useEffect(() => {
+    if (!isOpen || listeningFor) return;
+
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isOpen, listeningFor, onClose]);
 
   if (!isOpen || !mounted) return null;
 
@@ -623,7 +636,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div 
         className={clsx(
           "w-full max-w-4xl flex flex-col overflow-hidden transition-all duration-300 h-[80vh]",

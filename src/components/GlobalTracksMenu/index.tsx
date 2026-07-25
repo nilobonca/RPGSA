@@ -4,6 +4,7 @@ import { ActiveGlobalTrack } from '@/interfaces/utils/indexedDB';
 import AudioPlayerList from '@/components/player-list';
 import { Plus } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { useAudioEditorStore } from '@/store/audioEditorStore';
 
 interface GlobalTracksMenuProps {
     isPreviewInstance?: boolean;
@@ -52,6 +53,7 @@ export const GlobalTracksMenu: React.FC<GlobalTracksMenuProps> = ({ isPreviewIns
                     audio={audio}
                     onDelete={() => {}}
                     onDuplicate={() => {}}
+                    onEdit={(audio) => useAudioEditorStore.getState().openEditor({ audio })}
                     forcePlay={track.isPlaying}
                     isPreviewInstance={isPreviewInstance}
                     isHiddenReal={isHiddenReal}
@@ -92,6 +94,7 @@ export const GlobalTracksMenu: React.FC<GlobalTracksMenuProps> = ({ isPreviewIns
                                 const newTrack = { ...track, id: uuidv4() };
                                 addGlobalTrackPersisted(newTrack);
                             }}
+                            onEdit={(audio) => useAudioEditorStore.getState().openEditor({ audio })}
                             volume={track.volume}
                             onVolumeChange={(v) => updateGlobalTrackPersisted({ ...track, volume: v })}
                             pitch={track.pitch}

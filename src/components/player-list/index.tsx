@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { PlayIcon, PauseIcon, Copy, SquareX, Repeat, Volume2, VolumeX, Filter } from 'lucide-react';
+import { PlayIcon, PauseIcon, Copy, SquareX, Repeat, Volume2, VolumeX, Filter, Scissors } from 'lucide-react';
 import { Audios } from "@/interfaces/utils/indexedDB";
 
 import { getSharedAudioContext, resumeAudioContext } from "@/utils/audio/audioContext";
@@ -12,6 +12,7 @@ interface AudioPlayerListProps {
     audio: Audios;
     onDelete: (id: number) => void;
     onDuplicate: (audio: Audios) => void;
+    onEdit?: (audio: Audios) => void;
     forcePlay?: boolean; // Control playback externally (from pin interactions)
     proximityFactor?: number; // Volume control based on proximity
     spatialPan?: number; // Added! Panning from -1 (left) to 1 (right)
@@ -38,6 +39,7 @@ const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
     audio,
     onDelete,
     onDuplicate,
+    onEdit,
     forcePlay,
     proximityFactor = 1,
     spatialPan = 0,
@@ -488,6 +490,18 @@ const AudioPlayerList: React.FC<AudioPlayerListProps> = ({
                     >
                         <Copy size={14} className="text-blue-500" />
                     </button>
+                    {onEdit && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(audio);
+                            }}
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded transition-colors"
+                            title="Editar áudio"
+                        >
+                            <Scissors size={14} className="text-violet-500" />
+                        </button>
+                    )}
                     <button
                         onClick={(e) => {
                             e.stopPropagation();

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, useDragControls } from 'framer-motion';
-import { Maximize2, X, GripHorizontal, Search, Trash2, Wifi, WifiOff, Users } from 'lucide-react';
+import { Maximize2, X, GripHorizontal, Search, Trash2, Wifi, WifiOff, Users, Volume2 } from 'lucide-react';
 import { useViewportResize } from '@/hooks/useViewportResize';
+import { useCanvasGlobalStore } from '@/store/canvasStore';
 
 interface SessionListener {
     listenerId: string;
@@ -26,12 +27,13 @@ const ListenersMenu: React.FC<ListenersMenuProps> = ({
 }) => {
     const dragControls = useDragControls();
     const [searchTerm, setSearchTerm] = useState('');
+    const { guestMasterVolume, setGuestMasterVolume } = useCanvasGlobalStore();
 
     const { size, setSize, position, setPosition, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
-        initialSize: { width: 300, height: 350 },
+        initialSize: { width: 300, height: 380 },
         initialPosition: { x: 0, y: 100 }, // Will set dynamically on mount
         minWidth: 260,
-        minHeight: 200
+        minHeight: 220
     });
 
     useEffect(() => {
@@ -59,6 +61,29 @@ const ListenersMenu: React.FC<ListenersMenuProps> = ({
 
     const renderContent = () => (
         <div className="flex flex-col h-full overflow-hidden">
+            {/* Guest Master Volume Slider */}
+            <div className="p-2.5 border-b border-gray-200 dark:border-neutral-800 bg-indigo-50/40 dark:bg-indigo-950/20 flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-700 dark:text-neutral-300 flex items-center gap-1.5">
+                        <Volume2 size={13} className="text-indigo-500" />
+                        Volume Master Convidados
+                    </span>
+                    <span className="text-xs font-mono text-gray-500 dark:text-neutral-400">
+                        {Math.round(guestMasterVolume * 100)}%
+                    </span>
+                </div>
+                <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={guestMasterVolume}
+                    onChange={(e) => setGuestMasterVolume(parseFloat(e.target.value))}
+                    className="w-full accent-indigo-500 h-1.5 cursor-pointer"
+                    title="Volume mestre para todos os ouvintes"
+                />
+            </div>
+
             {/* Search Box */}
             <div className="p-2 border-b border-gray-200 dark:border-neutral-800">
                 <div className="relative">

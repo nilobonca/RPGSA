@@ -1,5 +1,5 @@
-﻿import React, { useState } from 'react';
-import { Dices, ShieldAlert, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Dices, ShieldAlert, ShieldCheck, X } from 'lucide-react';
 interface DiceTrayProps {
   onRoll: (resultText: string, isPrivate: boolean) => void;
   onClose?: () => void;
@@ -39,9 +39,9 @@ export const DiceTray: React.FC<DiceTrayProps> = ({ onRoll, onClose }) => {
 
     let resultText = '';
     if (qty === 1) {
-      resultText = `ðŸŽ² Rolou 1d${sides} e tirou: **${formattedResults[0]}**`;
+      resultText = `🎲 Rolou 1d${sides} e tirou: **${formattedResults[0]}**`;
     } else {
-      resultText = `ðŸŽ² Rolou ${qty}d${sides} [${formattedResults.join(', ')}] = **${total}**`;
+      resultText = `🎲 Rolou ${qty}d${sides} [${formattedResults.join(', ')}] = **${total}**`;
     }
 
     setRollHistory(prev => [{text: resultText, isPrivate: !sendToChat, id: Date.now()}, ...prev].slice(0, 20));
@@ -66,7 +66,7 @@ export const DiceTray: React.FC<DiceTrayProps> = ({ onRoll, onClose }) => {
         </h3>
         {onClose && (
           <button onClick={onClose} className="text-neutral-500 hover:text-white transition-colors">
-            âœ•
+            <X size={16} />
           </button>
         )}
       </div>

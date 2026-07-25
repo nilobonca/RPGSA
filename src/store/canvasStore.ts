@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 
 interface CanvasUIState {
   headerOpen: boolean;
@@ -25,6 +25,8 @@ interface CanvasUIState {
   bringToFront: (menuId: string) => void;
   masterVolume: number;
   setMasterVolume: (volume: number) => void;
+  guestMasterVolume: number;
+  setGuestMasterVolume: (volume: number) => void;
   isTheaterMode: boolean;
   setIsTheaterMode: (val: boolean) => void;
 }
@@ -110,6 +112,9 @@ export const useCanvasGlobalStore = create<CanvasGlobalStore>((set) => ({
 
   masterVolume: 1.0,
   setMasterVolume: (volume) => set({ masterVolume: volume }),
+
+  guestMasterVolume: 1.0,
+  setGuestMasterVolume: (volume) => set({ guestMasterVolume: volume }),
 
   isTheaterMode: false,
   setIsTheaterMode: (val) => set({ isTheaterMode: val }),
