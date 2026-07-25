@@ -14,8 +14,12 @@ export default function ListenerSession() {
 
     const [username, setUsername] = useState('');
     const [isJoined, setIsJoined] = useState(false);
+    const isJoinedRef = useRef(false);
     const [listenerId, setListenerId] = useState('');
-    const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'disconnected'>('idle');
+    const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'disconnected' | 'reconnecting'>('idle');
+    const [reconnectAttempt, setReconnectAttempt] = useState(0);
+    const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const isReconnectingRef = useRef(false);
     const [ping, setPing] = useState<number | null>(null);
     const [showSpectrogram, setShowSpectrogram] = useState(true);
     const [activeCount, setActiveCount] = useState(0);
@@ -340,201 +344,229 @@ export default function ListenerSession() {
         };
     }, [isJoined, showSpectrogram, status, drawSpectrogram]);
 
-    // Join Session
-    const handleJoin = (e: React.FormEvent) => {
-        e.preventDefault();
+    // Join / Reconnect Session
+    const attemptConnection = useCallback(async (isAutoRetry = false) => {
         if (!username.trim() || !projectId) return;
 
-        setStatus('connecting');
-        setErrorMessage(null);
-        initAudioGraph();
+        if (!isAutoRetry) {
+            setStatus('connecting');
+            setIsJoined(true);
+            isJoinedRef.current = true;
+            setErrorMessage(null);
+            initAudioGraph();
+        } else {
+            setStatus('reconnecting');
+            setReconnectAttempt(prev => prev + 1);
+        }
 
-        const initPeer = async () => {
-            try {
-                const Peer = (await import('peerjs')).default;
-                const peer = new Peer(listenerId, {
-                    debug: 1
+        if (reconnectTimerRef.current) {
+            clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = null;
+        }
+
+        // Clean up previous connections before retrying
+        if (channelRef.current) {
+            try { channelRef.current.close(); } catch (e) {}
+            channelRef.current = null;
+        }
+        if (currentCallRef.current) {
+            try { currentCallRef.current.close(); } catch (e) {}
+            currentCallRef.current = null;
+        }
+        if (peerRef.current) {
+            try { peerRef.current.destroy(); } catch (e) {}
+            peerRef.current = null;
+        }
+
+        const scheduleRetry = () => {
+            setStatus('reconnecting');
+            isReconnectingRef.current = true;
+            if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = setTimeout(() => {
+                attemptConnection(true);
+            }, 4000);
+        };
+
+        try {
+            const Peer = (await import('peerjs')).default;
+            const peer = new Peer(listenerId, { debug: 0 });
+            peerRef.current = peer;
+
+            peer.on('open', () => {
+                const gmPeerId = `visual-sound-design-${projectId}`;
+                const conn = peer.connect(gmPeerId, {
+                    metadata: { name: username }
                 });
-                peerRef.current = peer;
+                channelRef.current = conn;
 
-                peer.on('open', (id) => {
+                conn.on('open', () => {
+                    setStatus('connected');
+                    setIsJoined(true);
+                    isJoinedRef.current = true;
+                    isReconnectingRef.current = false;
+                    setReconnectAttempt(0);
+                    if (reconnectTimerRef.current) {
+                        clearTimeout(reconnectTimerRef.current);
+                        reconnectTimerRef.current = null;
+                    }
+                });
 
-                    const gmPeerId = `visual-sound-design-${projectId}`;
+                conn.on('data', (data: any) => {
+                    if (!data) return;
 
-                    
-                    const conn = peer.connect(gmPeerId, {
-                        metadata: { name: username }
-                    });
-                    channelRef.current = conn;
-
-                    conn.on('open', () => {
-
-                        setStatus('connected');
-                        setIsJoined(true);
-                    });
-
-                    conn.on('data', (data: any) => {
-                        if (!data) return;
-
-                        if (data.type === 'ping') {
-                            conn.send({
-                                type: 'pong',
-                                payload: { timestamp: data.payload.timestamp }
-                            });
-                        } else if (data.type === 'kick_listener') {
-                            alert("Você foi desconectado da sessão pelo Narrador.");
-                            handleLeave();
-                        } else if (data.type === 'status_update') {
-                            setActiveCount(data.payload.activeCount ?? 0);
-                        } else if (data.type === 'chat') {
-                            setChatMessages(prev => [...prev, data.payload]);
-                            playPing();
-                        } else if (data.type === 'minigame_start') {
-                            const payload = data.payload;
-                            if (payload.gameType === 'coin_flip') {
-                                const permissions = payload.config?.permissions || {};
-                                const userPerms = permissions[listenerId] || { canSee: true, canInteract: false };
-                                
-                                if (userPerms.canSee) {
-                                    setIsClickerActive(true);
-                                    setIsFadingOut(false);
-                                    setClickerConfig(payload);
-                                    setCoinCanInteract(userPerms.canInteract);
-                                    setCoinState('idle');
-                                    coinStateRef.current = 'idle';
-                                    setCoinResultFace(null);
-                                    setGameOver(false);
-                                    setTimeLeft(payload.config?.timeLimit || 30);
-                                }
-                            } else if (payload.gameType === 'cards') {
-                                const permissions = payload.config?.permissions || {};
-                                const userPerms = permissions[listenerId] || { canSee: true, canInteract: true, canSeeResult: false };
-                                
-                                if (userPerms.canSee) {
-                                    setIsClickerActive(true);
-                                    setIsFadingOut(false);
-                                    setClickerConfig(payload);
-                                    setCardPermissions(userPerms);
-                                    setCardState({ index: null, flipped: {} });
-                                    setGameOver(false);
-                                    setTimeLeft(payload.config?.timeLimit || 0);
-                                }
-                            } else {
+                    if (data.type === 'ping') {
+                        conn.send({
+                            type: 'pong',
+                            payload: { timestamp: data.payload.timestamp }
+                        });
+                    } else if (data.type === 'kick_listener') {
+                        alert("Você foi desconectado da sessão pelo Narrador.");
+                        handleLeave();
+                    } else if (data.type === 'status_update') {
+                        setActiveCount(data.payload.activeCount ?? 0);
+                    } else if (data.type === 'chat') {
+                        setChatMessages(prev => [...prev, data.payload]);
+                        playPing();
+                    } else if (data.type === 'minigame_start') {
+                        const payload = data.payload;
+                        if (payload.gameType === 'coin_flip') {
+                            const permissions = payload.config?.permissions || {};
+                            const userPerms = permissions[listenerId] || { canSee: true, canInteract: false };
+                            
+                            if (userPerms.canSee) {
                                 setIsClickerActive(true);
                                 setIsFadingOut(false);
                                 setClickerConfig(payload);
-                                setLocalClicks(0);
+                                setCoinCanInteract(userPerms.canInteract);
+                                setCoinState('idle');
+                                coinStateRef.current = 'idle';
+                                setCoinResultFace(null);
                                 setGameOver(false);
                                 setTimeLeft(payload.config?.timeLimit || 30);
                             }
-                        } else if (data.type === 'update_card_permissions') {
-                            if (clickerConfigRef.current?.gameType === 'cards') {
-                                const permissions = data.payload?.config?.permissions || data.payload?.permissions || {};
-                                const userPerms = permissions[listenerId];
-                                if (userPerms) {
-                                    setCardPermissions(userPerms);
-                                    if (data.payload?.config) {
-                                        setClickerConfig(data.payload);
-                                    }
-                                    if (!userPerms.canSee) {
-                                        setIsClickerActive(false);
-                                        setGameOver(true);
-                                    } else {
-                                        setIsClickerActive(true);
-                                        setIsFadingOut(false);
-                                        setGameOver(false);
-                                    }
+                        } else if (payload.gameType === 'cards') {
+                            const permissions = payload.config?.permissions || {};
+                            const userPerms = permissions[listenerId] || { canSee: true, canInteract: true, canSeeResult: false };
+                            
+                            if (userPerms.canSee) {
+                                setIsClickerActive(true);
+                                setIsFadingOut(false);
+                                setClickerConfig(payload);
+                                setCardPermissions(userPerms);
+                                setCardState({ index: null, flipped: {} });
+                                setGameOver(false);
+                                setTimeLeft(payload.config?.timeLimit || 0);
+                            }
+                        } else {
+                            setIsClickerActive(true);
+                            setIsFadingOut(false);
+                            setClickerConfig(payload);
+                            setLocalClicks(0);
+                            setGameOver(false);
+                            setTimeLeft(payload.config?.timeLimit || 30);
+                        }
+                    } else if (data.type === 'update_card_permissions') {
+                        if (clickerConfigRef.current?.gameType === 'cards') {
+                            const permissions = data.payload?.config?.permissions || data.payload?.permissions || {};
+                            const userPerms = permissions[listenerId];
+                            if (userPerms) {
+                                setCardPermissions(userPerms);
+                                if (data.payload?.config) {
+                                    setClickerConfig(data.payload);
+                                }
+                                if (!userPerms.canSee) {
+                                    setIsClickerActive(false);
+                                    setGameOver(true);
+                                } else {
+                                    setIsClickerActive(true);
+                                    setIsFadingOut(false);
+                                    setGameOver(false);
                                 }
                             }
-                        } else if (data.type === 'minigame_end') {
-                            setIsClickerActive(false);
-                            setGameOver(true);
-                            setTimeout(() => {
-                                setGameOver(false);
-                            }, 3000);
-                        } else if (data.type === 'force_coin_result') {
-                            if (coinStateRef.current === 'spinning') {
-                                forcedCoinResultRef.current = data.payload.result;
-                            }
                         }
-                    });
-
-                    conn.on('close', () => {
-
-                        setStatus('disconnected');
-                        handleLeave();
-                    });
-
-                    conn.on('error', (err) => {
-                        console.error('[DEBUG] GM connection error:', err);
-                        setStatus('disconnected');
-                        handleLeave();
-                    });
-                });
-
-                // Listen for incoming live stream calls from GM
-                peer.on('call', (call) => {
-
-                    currentCallRef.current = call;
-                    
-                    // Answer the call with no outbound stream
-                    call.answer();
-
-                    call.on('stream', (remoteStream) => {
-
-                        
-                        // 1. Play the stream using the hidden audio element
-                        if (audioElRef.current) {
-                            audioElRef.current.srcObject = remoteStream;
-                            audioElRef.current.volume = isMuted ? 0 : guestVolume;
-                            audioElRef.current.play().catch(e => console.error("Play stream failed:", e));
+                    } else if (data.type === 'minigame_end') {
+                        setIsClickerActive(false);
+                        setGameOver(true);
+                        setTimeout(() => {
+                            setGameOver(false);
+                        }, 3000);
+                    } else if (data.type === 'force_coin_result') {
+                        if (coinStateRef.current === 'spinning') {
+                            forcedCoinResultRef.current = data.payload.result;
                         }
-
-                        // 2. Connect the stream to the local AudioContext for visual analysis
-                        initAudioGraph();
-                        const ctx = audioContextRef.current;
-                        const analyser = analyserRef.current;
-                        if (ctx && analyser) {
-                            if (streamSourceRef.current) {
-                                try { streamSourceRef.current.disconnect(); } catch (e) {}
-                            }
-                            const source = ctx.createMediaStreamSource(remoteStream);
-                            source.connect(analyser);
-                            streamSourceRef.current = source;
-                        }
-                    });
-                });
-
-                peer.on('error', (err: any) => {
-                    console.error('[DEBUG] PeerJS client error:', err);
-                    if (err.type === 'peer-unavailable') {
-                        setErrorMessage('A sessão parece estar offline. Peça para o Mestre abrir a sala do Projeto primeiro.');
-                    } else {
-                        setErrorMessage('Erro de conexão: ' + err.message);
                     }
-                    setStatus('disconnected');
                 });
-            } catch (err) {
-                console.error('Failed to initialize listener PeerJS:', err);
-                setStatus('disconnected');
-            }
-        };
 
-        initPeer();
+                conn.on('close', () => {
+                    scheduleRetry();
+                });
+
+                conn.on('error', (err) => {
+                    console.warn('[DEBUG] GM connection state:', err);
+                    scheduleRetry();
+                });
+            });
+
+            // Listen for incoming live stream calls from GM
+            peer.on('call', (call) => {
+                currentCallRef.current = call;
+                call.answer();
+
+                call.on('stream', (remoteStream) => {
+                    if (audioElRef.current) {
+                        audioElRef.current.srcObject = remoteStream;
+                        audioElRef.current.volume = isMuted ? 0 : guestVolume;
+                        audioElRef.current.play().catch(e => console.error("Play stream failed:", e));
+                    }
+
+                    initAudioGraph();
+                    const ctx = audioContextRef.current;
+                    const analyser = analyserRef.current;
+                    if (ctx && analyser) {
+                        if (streamSourceRef.current) {
+                            try { streamSourceRef.current.disconnect(); } catch (e) {}
+                        }
+                        const source = ctx.createMediaStreamSource(remoteStream);
+                        source.connect(analyser);
+                        streamSourceRef.current = source;
+                    }
+                });
+            });
+
+            peer.on('error', (err: any) => {
+                console.warn('[DEBUG] PeerJS client state:', err?.type || err);
+                scheduleRetry();
+            });
+        } catch (err) {
+            console.warn('Listener PeerJS reconnecting:', err);
+            scheduleRetry();
+        }
+    }, [username, projectId, listenerId, initAudioGraph, isMuted, guestVolume, playPing]);
+
+    const handleJoin = (e: React.FormEvent) => {
+        e.preventDefault();
+        attemptConnection(false);
     };
 
     // Leave Session Cleanly
     const handleLeave = useCallback(() => {
+        if (reconnectTimerRef.current) {
+            clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = null;
+        }
+        isReconnectingRef.current = false;
+        isJoinedRef.current = false;
+
         if (channelRef.current) {
-            channelRef.current.close();
+            try { channelRef.current.close(); } catch (e) {}
             channelRef.current = null;
         }
         if (currentCallRef.current) {
-            currentCallRef.current.close();
+            try { currentCallRef.current.close(); } catch (e) {}
             currentCallRef.current = null;
         }
         if (peerRef.current) {
-            peerRef.current.destroy();
+            try { peerRef.current.destroy(); } catch (e) {}
             peerRef.current = null;
         }
 
@@ -553,19 +585,23 @@ export default function ListenerSession() {
         setStatus('idle');
         setPing(null);
         setActiveCount(0);
+        setReconnectAttempt(0);
     }, []);
 
     // Unmount Cleanup
     useEffect(() => {
         return () => {
+            if (reconnectTimerRef.current) {
+                clearTimeout(reconnectTimerRef.current);
+            }
             if (channelRef.current) {
-                channelRef.current.close();
+                try { channelRef.current.close(); } catch (e) {}
             }
             if (currentCallRef.current) {
-                currentCallRef.current.close();
+                try { currentCallRef.current.close(); } catch (e) {}
             }
             if (peerRef.current) {
-                peerRef.current.destroy();
+                try { peerRef.current.destroy(); } catch (e) {}
             }
             if (streamSourceRef.current) {
                 try { streamSourceRef.current.disconnect(); } catch (e) {}
@@ -665,6 +701,30 @@ export default function ListenerSession() {
             ) : (
                 // 2. Fully Connected Minimal Screen
                 <div className="flex-1 flex flex-col p-6 max-w-5xl mx-auto w-full relative z-10">
+                    {/* Reconnection Overlay */}
+                    {status === 'reconnecting' && (
+                        <div className="fixed inset-0 bg-neutral-950/85 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+                            <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center text-amber-400 mb-4 animate-pulse">
+                                <Wifi size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-2">Servidor do Mestre Desconectado</h3>
+                            <p className="text-sm text-neutral-300 max-w-md mb-6 leading-relaxed">
+                                A sala do Mestre parece ter sido fechada ou a conexão caiu.<br />
+                                Aguardando o Mestre abrir a sala novamente...
+                            </p>
+                            <div className="flex items-center gap-3 bg-neutral-900 border border-neutral-800 rounded-full px-5 py-2.5 text-xs font-mono text-amber-400 shadow-xl mb-6">
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+                                Reconectando automaticamente (Tentativa {reconnectAttempt})...
+                            </div>
+                            <button
+                                onClick={handleLeave}
+                                className="text-xs text-neutral-400 hover:text-rose-400 transition-colors underline cursor-pointer"
+                            >
+                                Sair da Sessão e voltar ao menu
+                            </button>
+                        </div>
+                    )}
+
                     {/* Top status bar */}
                     <div className="flex items-center justify-between border-b border-neutral-800/80 pb-4 mb-6">
                         <div className="flex items-center gap-3">
