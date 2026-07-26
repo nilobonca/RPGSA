@@ -252,6 +252,15 @@ const HeaderCab: React.FC<HeaderProps> = ({
   const [draggedItem, setDraggedItem] = useState<{ type: 'audio' | 'image' | 'folder', id: number | string, originalFolderId?: string } | null>(null);
   const [dragOverItem, setDragOverItem] = useState<{ type: 'audio' | 'image' | 'folder' | 'root', id: number | string, folderId?: string } | null>(null);
 
+  const handleCreateFolder = useCallback(async () => {
+    const newFolder = await addAssetFolder("Nova Pasta");
+    if (newFolder) {
+      setEditingFolderId(newFolder.id);
+      setEditingFolderName(newFolder.name);
+      setExpandedFolders(prev => new Set(prev).add(newFolder.id));
+    }
+  }, [addAssetFolder]);
+
   useEffect(() => {
     const handleStartRename = (e: CustomEvent) => {
       const { id, type } = e.detail;
@@ -281,9 +290,23 @@ const HeaderCab: React.FC<HeaderProps> = ({
       }
     };
     
+    const handleCreateFolderEvent = () => {
+      handleCreateFolder();
+    };
+
+    const handleToggleGroupingEvent = () => {
+      toggleGroupByType();
+    };
+
     window.addEventListener('start-asset-rename' as any, handleStartRename);
-    return () => window.removeEventListener('start-asset-rename' as any, handleStartRename);
-  }, [SavedAudios, savedImages, assetFolders]);
+    window.addEventListener('create-asset-folder' as any, handleCreateFolderEvent);
+    window.addEventListener('toggle-asset-grouping' as any, handleToggleGroupingEvent);
+    return () => {
+      window.removeEventListener('start-asset-rename' as any, handleStartRename);
+      window.removeEventListener('create-asset-folder' as any, handleCreateFolderEvent);
+      window.removeEventListener('toggle-asset-grouping' as any, handleToggleGroupingEvent);
+    };
+  }, [SavedAudios, savedImages, assetFolders, handleCreateFolder, toggleGroupByType]);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => {
@@ -292,15 +315,6 @@ const HeaderCab: React.FC<HeaderProps> = ({
       else next.add(folderId);
       return next;
     });
-  };
-
-  const handleCreateFolder = async () => {
-    const newFolder = await addAssetFolder("Nova Pasta");
-    if (newFolder) {
-      setEditingFolderId(newFolder.id);
-      setEditingFolderName(newFolder.name);
-      setExpandedFolders(prev => new Set(prev).add(newFolder.id));
-    }
   };
 
   const handleRenameFolderSubmit = (folder: any) => {
@@ -452,7 +466,7 @@ const HeaderCab: React.FC<HeaderProps> = ({
         onDragLeave={() => setDragOverItem(null)}
         onDragEnd={() => { setDraggedItem(null); setDragOverItem(null); }}
         onDrop={(e) => handleDropItem(e, itemType, item.id, item.folderId)}
-        onContextMenu={(e) => { e.stopPropagation(); if (onAssetContextMenu) { e.preventDefault(); onAssetContextMenu(e, item.id as number, itemType); } }}
+        onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); if (onAssetContextMenu) { onAssetContextMenu(e, item.id as number, itemType); } else { setContextMenuState({ x: e.clientX, y: e.clientY }); } }}
       >
         <div className="flex items-center gap-3 flex-grow min-w-0"
              onDoubleClick={(e) => {
@@ -514,7 +528,7 @@ const HeaderCab: React.FC<HeaderProps> = ({
           onDragLeave={() => setDragOverItem(null)}
           onDragEnd={() => { setDraggedItem(null); setDragOverItem(null); }}
           onDrop={(e) => handleDropItem(e, 'folder', folder.id)}
-          onContextMenu={(e) => { e.stopPropagation(); if (onAssetContextMenu) { e.preventDefault(); onAssetContextMenu(e, folder.id, 'folder'); } }}
+          onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); if (onAssetContextMenu) { onAssetContextMenu(e, folder.id, 'folder'); } else { setContextMenuState({ x: e.clientX, y: e.clientY }); } }}
         >
           <div 
             className="p-2.5 flex items-center justify-between cursor-pointer hover:bg-white dark:hover:bg-neutral-700 rounded-xl transition-colors"

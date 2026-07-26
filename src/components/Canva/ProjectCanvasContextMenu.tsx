@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Volume2,  
   Plus, Hexagon, MapPin, Type, LayoutGrid, Eye, Edit2, 
-  Music, Filter, Check, Palette, Trash2, User, Ear, Scissors
+  Music, Filter, Check, Palette, Trash2, User, Ear, Scissors,
+  FolderPlus, List
  } from 'lucide-react';
 import ContextMenu from '@/components/ContextMenu';
 import { useAudioEditorStore } from '@/store/audioEditorStore';
@@ -531,7 +532,23 @@ export function ProjectCanvasContextMenu({
               setContextMenu(null);
             }
           },
-          { label: 'Excluir Áudio', onClick: () => { if (contextMenu.itemId) deleteAudio(Number(contextMenu.itemId)); }, icon: <Trash2 size={18} /> }
+          {
+            label: 'Nova Pasta',
+            icon: <FolderPlus size={18} />,
+            onClick: () => {
+              window.dispatchEvent(new CustomEvent('create-asset-folder'));
+              setContextMenu(null);
+            }
+          },
+          {
+            label: (typeof window !== 'undefined' && localStorage.getItem('assetGroupByType') === 'true') ? 'Misturar Itens' : 'Separar por Tipo',
+            icon: (typeof window !== 'undefined' && localStorage.getItem('assetGroupByType') === 'true') ? <LayoutGrid size={18} /> : <List size={18} />,
+            onClick: () => {
+              window.dispatchEvent(new CustomEvent('toggle-asset-grouping'));
+              setContextMenu(null);
+            }
+          },
+          { label: 'Excluir Áudio', onClick: () => { if (contextMenu.itemId) deleteAudio(Number(contextMenu.itemId)); setContextMenu(null); }, icon: <Trash2 size={18} /> }
         ] : []),
         ...(contextMenu.type === 'asset-image' ? [
           {
@@ -542,7 +559,23 @@ export function ProjectCanvasContextMenu({
               setContextMenu(null);
             }
           },
-          { label: 'Excluir Imagem', onClick: () => { if (contextMenu.itemId) deleteImage(Number(contextMenu.itemId)); }, icon: <Trash2 size={18} /> }
+          {
+            label: 'Nova Pasta',
+            icon: <FolderPlus size={18} />,
+            onClick: () => {
+              window.dispatchEvent(new CustomEvent('create-asset-folder'));
+              setContextMenu(null);
+            }
+          },
+          {
+            label: (typeof window !== 'undefined' && localStorage.getItem('assetGroupByType') === 'true') ? 'Misturar Itens' : 'Separar por Tipo',
+            icon: (typeof window !== 'undefined' && localStorage.getItem('assetGroupByType') === 'true') ? <LayoutGrid size={18} /> : <List size={18} />,
+            onClick: () => {
+              window.dispatchEvent(new CustomEvent('toggle-asset-grouping'));
+              setContextMenu(null);
+            }
+          },
+          { label: 'Excluir Imagem', onClick: () => { if (contextMenu.itemId) deleteImage(Number(contextMenu.itemId)); setContextMenu(null); }, icon: <Trash2 size={18} /> }
         ] : []),
         ...(contextMenu.type === 'asset-folder' ? [
           {
@@ -553,7 +586,23 @@ export function ProjectCanvasContextMenu({
               setContextMenu(null);
             }
           },
-          { label: 'Excluir Pasta', onClick: () => { if (contextMenu.itemId && deleteAssetFolder) deleteAssetFolder(contextMenu.itemId); }, icon: <Trash2 size={18} /> }
+          {
+            label: 'Nova Pasta',
+            icon: <FolderPlus size={18} />,
+            onClick: () => {
+              window.dispatchEvent(new CustomEvent('create-asset-folder'));
+              setContextMenu(null);
+            }
+          },
+          {
+            label: (typeof window !== 'undefined' && localStorage.getItem('assetGroupByType') === 'true') ? 'Misturar Itens' : 'Separar por Tipo',
+            icon: (typeof window !== 'undefined' && localStorage.getItem('assetGroupByType') === 'true') ? <LayoutGrid size={18} /> : <List size={18} />,
+            onClick: () => {
+              window.dispatchEvent(new CustomEvent('toggle-asset-grouping'));
+              setContextMenu(null);
+            }
+          },
+          { label: 'Excluir Pasta', onClick: () => { if (contextMenu.itemId && deleteAssetFolder) deleteAssetFolder(contextMenu.itemId); setContextMenu(null); }, icon: <Trash2 size={18} /> }
         ] : [])
       ]}
     />
