@@ -21,17 +21,12 @@ export const PinManager: React.FC<PinManagerProps> = ({ pins, onToggle, onRename
     const { reorderPins } = useIDB();
 
     const { size, setSize, position, setPosition, onDragEnd, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
+        menuId: 'pin',
         initialSize: { width: 300, height: 400 },
-        initialPosition: { x: 800, y: 100 },
+        initialPosition: { x: typeof window !== 'undefined' ? window.innerWidth - 320 : 800, y: 100 },
         minWidth: 280,
         minHeight: 200
     });
-
-    React.useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setPosition({ x: window.innerWidth - 320, y: 100 });
-        }
-    }, [setPosition]);
 
 
 
@@ -47,8 +42,7 @@ export const PinManager: React.FC<PinManagerProps> = ({ pins, onToggle, onRename
                 height,
                 maxHeight: '80vh',
                 left: position.x,
-                top: position.y,
-                zIndex: 50
+                top: position.y
             }}
             drag
             dragListener={false}

@@ -34,6 +34,7 @@ export default function HistoryMenu({ history, future, onRestore, onClose, onInt
     const menuRef = useRef<HTMLDivElement>(null);
 
     const { size, setSize, position, onDragEnd, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
+        menuId: 'history',
         initialSize: { width: 320, height: 500 },
         initialPosition: { x: typeof window !== 'undefined' ? window.innerWidth - 340 : 100, y: 100 },
         minWidth: 280,

@@ -484,7 +484,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   onClick={() => {
                     addGame({
                       id: uuidv4(),
-                      gameId: 'clicker-game',
+                      gameId: 'clicker',
                       title: 'Desafio de Cliques',
                       isMinimized: false,
                       status: 'idle',

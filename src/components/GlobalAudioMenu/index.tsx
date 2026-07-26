@@ -37,6 +37,7 @@ export default function GlobalAudioMenu({ projectId, onClose, onInteraction, zIn
     const dragControls = useDragControls();
     const menuRef = useRef<HTMLDivElement>(null);
     const { size, setSize, position, setPosition, onDragEnd, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
+        menuId: 'globalTracks',
         initialSize: { width: 360, height: 400 },
         initialPosition: { x: typeof window !== 'undefined' && window.innerWidth >= 380 ? window.innerWidth - 380 : 20, y: 80 },
         minWidth: 360,

@@ -258,43 +258,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
         </div>
       )}
 
-      {/* Pin Manager - Floating */}
-      {pinManagerOpen && (
-        <div
-          className="fixed inset-0 z-50 pointer-events-none"
-          style={{ zIndex: menuZIndices.pin }}
-          onMouseDown={() => bringToFront('pin')}
-        >
-          <PinManager
-            pins={activePins}
-            onToggle={(pin) => updatePinPersisted({ ...pin, enabled: !pin.enabled })}
-            onRename={(pin, newName) => updatePinPersisted({ ...pin, name: newName })}
-            onUpdate={updatePinPersisted}
-            onDelete={deletePinPersisted}
-            onClose={() => setPinManagerOpen(false)}
-            onInteraction={() => bringToFront('pin')}
-          />
-        </div>
-      )}
 
-      {/* History Menu - Floating */}
-      {historyOpen && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ zIndex: menuZIndices.history }}
-          onMouseDown={() => bringToFront('history')}
-        >
-          <HistoryMenu
-            history={history}
-            future={future}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            onClose={() => setHistoryOpen(false)}
-            onRestore={handleRestoreHistory}
-            onInteraction={() => bringToFront('history')}
-          />
-        </div>
-      )}
 
       
 
@@ -432,7 +396,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
         } else if (game.gameId === 'cards') {
           return <CardsMinigameHost key={game.id} id={game.id} sessionListeners={sessionListeners} />;
         }
-        return <ClickerMinigameHost key={game.id} id={game.id} />;
+        return <ClickerMinigameHost key={game.id} id={game.id} sessionListeners={sessionListeners} />;
       })}
 
       {/* Desktop Dock Bar - Bottom Left */}
@@ -440,7 +404,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
         {/* Layer Manager Toggle */}
         {!layerManagerOpen && (
           <button
-            onClick={() => setLayerManagerOpen(true)}
+            onClick={() => { bringToFront('layer'); setLayerManagerOpen(true); }}
             className={buttonClass}
             title="Abrir Camadas"
           >
@@ -451,7 +415,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
         {/* Pin Manager Toggle */}
         {!pinManagerOpen && (
           <button
-            onClick={() => setPinManagerOpen(true)}
+            onClick={() => { bringToFront('pin'); setPinManagerOpen(true); }}
             className={buttonClass}
             title="Abrir Pins"
           >
@@ -462,7 +426,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
         {/* History Toggle */}
         {!historyOpen && (
           <button
-            onClick={() => setHistoryOpen(true)}
+            onClick={() => { bringToFront('history'); setHistoryOpen(true); }}
             className={buttonClass}
             title="Abrir Histórico"
           >
@@ -473,7 +437,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
         {/* Soundboard Toggle */}
         {!soundboardOpen && (
           <button
-            onClick={() => setSoundboardOpen(true)}
+            onClick={() => { bringToFront('soundboard'); setSoundboardOpen(true); }}
             className={buttonClass}
             title="Abrir Soundboard"
           >
@@ -484,7 +448,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
         {/* Global Tracks Toggle */}
         {!globalTracksOpen && (
           <button
-            onClick={() => setGlobalTracksOpen(true)}
+            onClick={() => { bringToFront('globalTracks'); setGlobalTracksOpen(true); }}
             className={buttonClass}
             title="Abrir Áudio Global"
           >
@@ -496,7 +460,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
         {/* Active Players Toggle */}
         {!activePlayersOpen && (
           <button
-            onClick={() => setActivePlayersOpen(true)}
+            onClick={() => { bringToFront('activePlayers'); setActivePlayersOpen(true); }}
             className={buttonClass}
             title="Abrir Players Ativos"
           >
@@ -508,7 +472,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
         {/* Header/Assets Toggle */}
         {!headerOpen && (
           <button
-            onClick={() => setHeaderOpen(true)}
+            onClick={() => { bringToFront('header'); setHeaderOpen(true); }}
             className={buttonClass}
             title="Abrir Assets"
           >
@@ -539,7 +503,7 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
               const newId = `clicker_${Date.now()}`;
               useMinigamesStore.getState().addGame({
                 id: newId,
-                gameId: 'clicker-game',
+                gameId: 'clicker',
                 title: 'Desafio de Cliques',
                 isMinimized: false,
                 status: 'idle',

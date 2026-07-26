@@ -1,7 +1,8 @@
-﻿import React from 'react';
+import React from 'react';
 import { MinigameWindow } from './MinigameWindow';
 import { useMinigamesStore } from '@/store/minigamesStore';
 import { useThemeStore } from '@/store/themeStore';
+import { MinigamePresetBar } from './MinigamePresetBar';
 import { useIDB } from '@/utils/indexedDB';
 import clsx from 'clsx';
 
@@ -32,7 +33,13 @@ const compressImage = (file: File): Promise<string> => {
   });
 };
 
-export const ClickerMinigameHost: React.FC<{ id: string }> = ({ id }) => {
+interface SessionListener {
+  listenerId: string;
+  name: string;
+  status?: string;
+}
+
+export const ClickerMinigameHost: React.FC<{ id: string, sessionListeners?: SessionListener[] }> = ({ id, sessionListeners = [] }) => {
   const { activeGames, updateGame, playerProgress, broadcastEvent, clearProgress } = useMinigamesStore();
   const { theme } = useThemeStore();
   const { savedImages } = useIDB();
@@ -46,6 +53,8 @@ export const ClickerMinigameHost: React.FC<{ id: string }> = ({ id }) => {
   const hideTarget = game.config?.hideTarget ?? false;
   const autoClose = game.config?.autoClose ?? false;
   const fadeoutTime = game.config?.fadeoutTime ?? 2;
+  const isCooperative = game.config?.isCooperative ?? false;
+  const permissions = game.config?.permissions || {};
 
   const handleStart = () => {
     clearProgress();
@@ -57,13 +66,17 @@ export const ClickerMinigameHost: React.FC<{ id: string }> = ({ id }) => {
         payload: {
           gameId: id,
           gameType: 'clicker',
+          title: game.config?.customTitle || undefined,
+          description: game.config?.customSubtitle || undefined,
           config: { 
             targetClicks: parseInt(targetClicks as string) || 100, 
             timeLimit: parseInt(timeLimit as string) || 30, 
             imageUrl,
             hideTarget,
             autoClose,
-            fadeoutTime
+            fadeoutTime,
+            isCooperative,
+            permissions
           }
         }
       });
@@ -89,10 +102,45 @@ export const ClickerMinigameHost: React.FC<{ id: string }> = ({ id }) => {
       : "bg-neutral-800 border-neutral-700 text-neutral-200"
   );
 
+  const totalCooperativeClicks = Object.values(playerProgress).reduce((acc, curr) => acc + (curr.clicks || 0), 0);
+  const coopPercent = Math.min((totalCooperativeClicks / targetClicks) * 100, 100);
+
   return (
     <MinigameWindow id={id} title={game.title || "Desafio de Cliques"}>
       {(!game.status || game.status === 'idle') && (
-        <div className="space-y-4 flex flex-col flex-1">
+        <div className="space-y-4 flex flex-col flex-1 overflow-y-auto">
+          {/* Preset Manager Bar */}
+          <MinigamePresetBar activeGameId={id} gameId="clicker" currentConfig={game.config} />
+
+          {/* Custom Guest Title & Subtitle */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 border border-neutral-700/60 rounded-xl bg-neutral-900/40">
+            <div>
+              <label className="block text-xs mb-1 text-neutral-400 font-semibold">Título para Convidados</label>
+              <input 
+                type="text" 
+                placeholder="Padrão: Desafio de Cliques"
+                className={clsx(inputClass, "text-xs py-1")}
+                value={game.config?.customTitle || ''} 
+                onChange={e => {
+                  const val = e.target.value;
+                  updateGame(id, { config: { ...game.config, customTitle: val } });
+                }} 
+              />
+            </div>
+            <div>
+              <label className="block text-xs mb-1 text-neutral-400 font-semibold">Subtítulo para Convidados</label>
+              <input 
+                type="text" 
+                placeholder="Padrão: Clique o mais rápido..."
+                className={clsx(inputClass, "text-xs py-1")}
+                value={game.config?.customSubtitle || ''} 
+                onChange={e => {
+                  const val = e.target.value;
+                  updateGame(id, { config: { ...game.config, customSubtitle: val } });
+                }} 
+              />
+            </div>
+          </div>
           <div>
             <label className="block text-sm mb-1 text-neutral-400">Cliques Necessários</label>
             <input 
@@ -162,6 +210,16 @@ export const ClickerMinigameHost: React.FC<{ id: string }> = ({ id }) => {
           </div>
 
           <div className="space-y-3 pt-2">
+            <label className="flex items-center gap-2 text-sm text-neutral-200 font-semibold cursor-pointer p-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10">
+              <input 
+                type="checkbox" 
+                className="rounded border-neutral-700 bg-neutral-800 text-indigo-500 focus:ring-indigo-500/20 w-4 h-4"
+                checked={isCooperative}
+                onChange={e => updateGame(id, { config: { ...game.config, isCooperative: e.target.checked } })}
+              />
+              <span>Modo Cooperativo (Somar cliques de todos os convidados)</span>
+            </label>
+
             <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
               <input 
                 type="checkbox" 
@@ -197,6 +255,49 @@ export const ClickerMinigameHost: React.FC<{ id: string }> = ({ id }) => {
               </div>
             )}
           </div>
+
+          {/* Guest Permissions List */}
+          <div>
+            <label className="block text-sm mb-2 text-neutral-400 font-semibold">Permissões dos Convidados</label>
+            <div className="space-y-2 max-h-36 overflow-y-auto pr-1 scrollbar-thin">
+              {sessionListeners.map(listener => {
+                const p = permissions[listener.listenerId] || { canSee: true, canInteract: true };
+                return (
+                  <div key={listener.listenerId} className={clsx("flex items-center justify-between p-2 rounded-lg border", isEthereal ? "border-white/10 bg-white/5" : "border-neutral-700 bg-neutral-800")}>
+                    <span className="text-xs font-medium truncate max-w-[110px]" title={listener.name}>{listener.name || listener.listenerId}</span>
+                    <div className="flex gap-3">
+                      <label className="flex items-center gap-1 text-xs text-neutral-300 cursor-pointer">
+                        <input type="checkbox" checked={p.canSee} onChange={(e) => {
+                          const newPerms = { ...permissions, [listener.listenerId]: { ...p, canSee: e.target.checked } };
+                          updateGame(id, { config: { ...game.config, permissions: newPerms } });
+                          if (broadcastEvent) {
+                            broadcastEvent({ type: 'update_clicker_permissions', payload: { gameId: id, permissions: newPerms } });
+                          }
+                        }} />
+                        Ver
+                      </label>
+                      <label className="flex items-center gap-1 text-xs text-neutral-300 cursor-pointer">
+                        <input type="checkbox" checked={p.canInteract} onChange={(e) => {
+                          const newPerms = { ...permissions, [listener.listenerId]: { ...p, canInteract: e.target.checked } };
+                          updateGame(id, { config: { ...game.config, permissions: newPerms } });
+                          if (broadcastEvent) {
+                            broadcastEvent({ type: 'update_clicker_permissions', payload: { gameId: id, permissions: newPerms } });
+                          }
+                        }} />
+                        Interagir
+                      </label>
+                    </div>
+                  </div>
+                );
+              })}
+              {sessionListeners.length === 0 && (
+                <div className="text-xs text-neutral-500 italic p-3 border border-dashed border-neutral-700/60 rounded-xl text-center">
+                  Nenhum convidado conectado no momento.
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="mt-auto pt-4">
             <button 
               onClick={handleStart}
@@ -219,8 +320,20 @@ export const ClickerMinigameHost: React.FC<{ id: string }> = ({ id }) => {
               <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded-full border border-amber-500/20">Em andamento</span>
             )}
           </div>
+
+          {isCooperative && (
+            <div className="p-3 rounded-xl border border-indigo-500/40 bg-indigo-950/40 space-y-1.5">
+              <div className="flex justify-between text-xs text-indigo-200 font-bold">
+                <span>🤝 Progresso Coletivo Total</span>
+                <span className="font-mono">{totalCooperativeClicks} / {targetClicks} ({Math.round(coopPercent)}%)</span>
+              </div>
+              <div className="h-3 w-full bg-neutral-900 rounded-full overflow-hidden border border-indigo-500/30">
+                <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-300" style={{ width: `${coopPercent}%` }} />
+              </div>
+            </div>
+          )}
           
-          <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+          <div className="space-y-3 flex-1 overflow-y-auto pr-1 scrollbar-thin">
             {Object.entries(playerProgress).map(([listenerId, progress]) => {
               const clicks = progress.clicks || 0;
               const percent = Math.min((clicks / targetClicks) * 100, 100);

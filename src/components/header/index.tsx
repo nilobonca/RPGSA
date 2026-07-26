@@ -8,7 +8,6 @@ import ContextMenu from "../ContextMenu";
 
 import { motion, useDragControls, Reorder } from "framer-motion";
 import { useViewportResize } from "@/hooks/useViewportResize";
-import { ThemeToggle } from "../ThemeToggle";
 
 const DragHandleIcon = () => (
   <div>
@@ -191,6 +190,7 @@ const HeaderCab: React.FC<HeaderProps> = ({
   }
 
   const { size, position, handleResizeStart, onDragEnd, width, height } = useViewportResize({
+    menuId: 'header',
     initialSize: { width: 300, height: 500 },
     initialPosition: { x: 16, y: 80 },
     minWidth: 240,
@@ -660,7 +660,6 @@ const HeaderCab: React.FC<HeaderProps> = ({
             <div className="w-8 h-1 rounded-full bg-gray-300 dark:bg-neutral-600 transition-colors group-hover/header:bg-violet-400" />
           </div>
           <div className="flex items-center gap-1.5">
-            <ThemeToggle />
             {onClose && (
               <button
                 onClick={onClose}

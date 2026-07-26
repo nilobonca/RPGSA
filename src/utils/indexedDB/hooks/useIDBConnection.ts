@@ -213,7 +213,7 @@ export function useIDBConnection(params: UseIDBConnectionParams) {
     useEffect(() => {
         if (typeof window === 'undefined') return;
         const initDB = () => {
-            const request = window.indexedDB.open('RPGSA_DB', 8);
+            const request = window.indexedDB.open('RPGSA_DB', 9);
             request.onerror = (event) => console.error('Erro ao abrir IndexedDB');
             request.onsuccess = (event) => {
                 const database = (event.target as IDBOpenDBRequest).result;
@@ -240,6 +240,8 @@ export function useIDBConnection(params: UseIDBConnectionParams) {
                 if (!database.objectStoreNames.contains('polls')) database.createObjectStore('polls', { keyPath: 'id' });
                 if (!database.objectStoreNames.contains('poll_responses')) database.createObjectStore('poll_responses', { keyPath: 'id' });
                 if (!database.objectStoreNames.contains('asset_folders')) database.createObjectStore('asset_folders', { keyPath: 'id' });
+                if (!database.objectStoreNames.contains('keyval')) database.createObjectStore('keyval');
+                if (!database.objectStoreNames.contains('minigame_presets')) database.createObjectStore('minigame_presets', { keyPath: 'id' });
             };
         };
         initDB();

@@ -346,6 +346,7 @@ function LayerManagerInner({ onLayerAction, onInteraction, onClose, activeProjec
     };
 
     const { size, setSize, position, onDragEnd, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
+        menuId: 'layer',
         initialSize: { width: 300, height: 400 },
         initialPosition: { x: 20, y: 80 },
         minWidth: 260,

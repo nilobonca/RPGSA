@@ -1,4 +1,3 @@
-﻿import { useEffect, useState } from 'react';
 import { useCanvasGlobalStore } from '@/store/canvasStore';
 
 export const useCanvasUI = (projectId: string | string[] | undefined) => {
@@ -32,92 +31,6 @@ export const useCanvasUI = (projectId: string | string[] | undefined) => {
   
   const menuZIndices = useCanvasGlobalStore(state => state.menuZIndices);
   const bringToFront = useCanvasGlobalStore(state => state.bringToFront) as (menu: 'header' | 'layer' | 'pin' | 'soundboard' | 'globalTracks' | 'history' | 'listeners' | 'activePlayers') => void;
-
-  const [loadedId, setLoadedId] = useState<string | null>(null);
-
-  // Load from localStorage when projectId is available
-  useEffect(() => {
-    if (typeof window !== 'undefined' && projectId) {
-      const id = Array.isArray(projectId) ? projectId[0] : projectId;
-      
-      // Only load if we haven't loaded this project yet
-      if (loadedId !== id) {
-        const keys = ['headerOpen', 'layerManagerOpen', 'pinManagerOpen', 'historyOpen', 'soundboardOpen', 'activePlayersOpen', 'globalTracksOpen'] as const;
-        
-        keys.forEach(key => {
-          const stored = localStorage.getItem(`${key}_${id}`);
-          if (stored !== null) {
-            const val = stored === 'true';
-            if (key === 'headerOpen') setHeaderOpen(val);
-            else if (key === 'layerManagerOpen') setLayerManagerOpen(val);
-            else if (key === 'pinManagerOpen') setPinManagerOpen(val);
-            else if (key === 'historyOpen') setHistoryOpen(val);
-            else if (key === 'soundboardOpen') setSoundboardOpen(val);
-            else if (key === 'activePlayersOpen') setActivePlayersOpen(val);
-            else if (key === 'globalTracksOpen') setGlobalTracksOpen(val);
-          } else {
-            // Defaults for new projects
-            if (key === 'headerOpen') setHeaderOpen(true);
-            else if (key === 'layerManagerOpen') setLayerManagerOpen(false);
-          }
-        });
-        
-        setLoadedId(id);
-      }
-    }
-  }, [projectId, loadedId, setHeaderOpen, setLayerManagerOpen, setPinManagerOpen, setHistoryOpen, setSoundboardOpen, setActivePlayersOpen, setGlobalTracksOpen]);
-
-  // Persist changes to localStorage (only after loading the current project)
-  useEffect(() => {
-    if (typeof window !== 'undefined' && loadedId) {
-      localStorage.setItem(`headerOpen_${loadedId}`, String(headerOpen));
-    }
-  }, [headerOpen, loadedId]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && loadedId) {
-      localStorage.setItem(`layerManagerOpen_${loadedId}`, String(layerManagerOpen));
-    }
-  }, [layerManagerOpen, loadedId]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && loadedId) {
-      localStorage.setItem(`pinManagerOpen_${loadedId}`, String(pinManagerOpen));
-    }
-  }, [pinManagerOpen, loadedId]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && loadedId) {
-      localStorage.setItem(`historyOpen_${loadedId}`, String(historyOpen));
-    }
-  }, [historyOpen, loadedId]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && loadedId) {
-      localStorage.setItem(`soundboardOpen_${loadedId}`, String(soundboardOpen));
-    }
-  }, [soundboardOpen, loadedId]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && loadedId) {
-      localStorage.setItem(`activePlayersOpen_${loadedId}`, String(activePlayersOpen));
-    }
-  }, [activePlayersOpen, loadedId]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && loadedId) {
-      localStorage.setItem(`globalTracksOpen_${loadedId}`, String(globalTracksOpen));
-    }
-  }, [globalTracksOpen, loadedId]);
-
-  // Reset menus when project changes (navigating between folders/projects)
-  useEffect(() => {
-    setPinManagerOpen(false);
-    setHistoryOpen(false);
-    setSoundboardOpen(false);
-    setActivePlayersOpen(false);
-    setGlobalTracksOpen(false);
-  }, [projectId, setPinManagerOpen, setHistoryOpen, setSoundboardOpen, setActivePlayersOpen, setGlobalTracksOpen]);
 
   return {
     headerOpen, setHeaderOpen,

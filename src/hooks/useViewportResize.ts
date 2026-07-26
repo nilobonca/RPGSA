@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PanInfo, useMotionValue } from 'framer-motion';
+import { useCanvasGlobalStore } from '@/store/canvasStore';
 
 interface Size {
     width: number;
@@ -12,6 +13,7 @@ interface Position {
 }
 
 interface UseViewportResizeProps {
+    menuId?: string;
     initialSize: Size;
     initialPosition: Position;
     minWidth: number;
@@ -19,9 +21,7 @@ interface UseViewportResizeProps {
     margin?: number;
 }
 
-// Removed singleton viewport element as we now use exact calculated bounds
-
-export const useViewportResize = ({ initialSize, initialPosition, minWidth, minHeight, margin = 20 }: UseViewportResizeProps) => {
+export const useViewportResize = ({ menuId, initialSize, initialPosition, minWidth, minHeight, margin = 20 }: UseViewportResizeProps) => {
     const [size, setSize] = useState<Size>(initialSize);
     const [position, setPosition] = useState<Position>(initialPosition);
     const [isDesktop, setIsDesktop] = useState(false);
@@ -75,6 +75,28 @@ export const useViewportResize = ({ initialSize, initialPosition, minWidth, minH
         };
     }, [margin]);
 
+    // Restore saved position/size on initial mount if menuId is provided, or calculate right side default
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const saved = menuId ? useCanvasGlobalStore.getState().menuPositions[menuId] : undefined;
+            if (saved && saved.x !== undefined && saved.y !== undefined) {
+                const targetSize = (saved.width && saved.height) ? { width: saved.width, height: saved.height } : sizeRef.current;
+                const clamped = clampPosition({ x: saved.x, y: saved.y }, targetSize);
+                setPosition(clamped);
+                positionRef.current = clamped;
+                if (saved.width && saved.height) {
+                    setSize(targetSize);
+                    sizeRef.current = targetSize;
+                }
+            } else if (initialPosition.x >= 500 || menuId === 'activePlayers' || menuId === 'pin' || menuId === 'listeners' || menuId === 'soundboard') {
+                const rightX = Math.max(margin, window.innerWidth - sizeRef.current.width - margin);
+                const clamped = clampPosition({ x: rightX, y: initialPosition.y || 100 }, sizeRef.current);
+                setPosition(clamped);
+                positionRef.current = clamped;
+            }
+        }
+    }, [menuId, clampPosition, initialPosition.x, initialPosition.y, margin]);
+
     // Sync refs and relative position
     useEffect(() => {
         setIsMounted(true);
@@ -117,16 +139,25 @@ export const useViewportResize = ({ initialSize, initialPosition, minWidth, minH
         return () => window.removeEventListener('resize', handleResize);
     }, [isMounted, minWidth, minHeight, margin, clampPosition, calculateAbsolute]);
 
-    // After drag ends, sync React state with where framer-motion left the element
+    // After drag ends, sync React state with where framer-motion left the element and save to store
     const onDragEnd = (event: unknown, info: PanInfo) => {
         const newX = positionRef.current.x + x.get();
         const newY = positionRef.current.y + y.get();
-        setPosition(clampPosition({ x: newX, y: newY }, sizeRef.current));
+        const clamped = clampPosition({ x: newX, y: newY }, sizeRef.current);
+        setPosition(clamped);
         x.set(0);
         y.set(0);
+        if (menuId) {
+            useCanvasGlobalStore.getState().setMenuPosition(menuId, {
+                x: clamped.x,
+                y: clamped.y,
+                width: sizeRef.current.width,
+                height: sizeRef.current.height
+            });
+        }
     };
 
-    // Centralised resize handler â€” enforces minWidth/minHeight AND viewport bounds
+    // Centralised resize handler — enforces minWidth/minHeight AND viewport bounds and saves to store
     const handleResizeStart = useCallback((e: React.PointerEvent | React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -152,8 +183,18 @@ export const useViewportResize = ({ initialSize, initialPosition, minWidth, minH
 
         const handlePointerUp = () => {
             if (rAF) cancelAnimationFrame(rAF);
-            // Commit final size to React state on drag end
-            setSize({ width: width.get(), height: height.get() });
+            // Commit final size to React state on drag end and store
+            const finalW = width.get();
+            const finalH = height.get();
+            setSize({ width: finalW, height: finalH });
+            if (menuId) {
+                useCanvasGlobalStore.getState().setMenuPosition(menuId, {
+                    x: positionRef.current.x,
+                    y: positionRef.current.y,
+                    width: finalW,
+                    height: finalH
+                });
+            }
             document.removeEventListener('pointermove', handlePointerMove as any);
             document.removeEventListener('pointerup', handlePointerUp);
             document.removeEventListener('mousemove', handlePointerMove as any);
@@ -164,7 +205,7 @@ export const useViewportResize = ({ initialSize, initialPosition, minWidth, minH
         document.addEventListener('pointerup', handlePointerUp);
         document.addEventListener('mousemove', handlePointerMove as any);
         document.addEventListener('mouseup', handlePointerUp);
-    }, [margin, minWidth, minHeight]);
+    }, [margin, minWidth, minHeight, menuId]);
 
     // Calculate exact constraints based on current position and size
     const constraintRef = {

@@ -1,7 +1,8 @@
-﻿import React from 'react';
+import React from 'react';
 import { MinigameWindow } from './MinigameWindow';
 import { useMinigamesStore } from '@/store/minigamesStore';
 import { useThemeStore } from '@/store/themeStore';
+import { MinigamePresetBar } from './MinigamePresetBar';
 import clsx from 'clsx';
 
 interface SessionListener {
@@ -31,6 +32,8 @@ export const CoinFlipMinigameHost: React.FC<{ id: string, sessionListeners: Sess
         payload: {
           gameId: id,
           gameType: 'coin_flip',
+          title: game.config?.customTitle || undefined,
+          description: game.config?.customSubtitle || undefined,
           config: { 
             maxFlips: parseInt(maxFlips as string) || 1,
             permissions,
@@ -64,7 +67,39 @@ export const CoinFlipMinigameHost: React.FC<{ id: string, sessionListeners: Sess
   return (
     <MinigameWindow id={id} title={game.title || "Cara ou Coroa"}>
       {(!game.status || game.status === 'idle') && (
-        <div className="space-y-4 flex flex-col flex-1">
+        <div className="space-y-4 flex flex-col flex-1 overflow-y-auto">
+          {/* Preset Manager Bar */}
+          <MinigamePresetBar activeGameId={id} gameId="coin_flip" currentConfig={game.config} />
+
+          {/* Custom Guest Title & Subtitle */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 border border-neutral-700/60 rounded-xl bg-neutral-900/40">
+            <div>
+              <label className="block text-xs mb-1 text-neutral-400 font-semibold">Título para Convidados</label>
+              <input 
+                type="text" 
+                placeholder="Padrão: Cara ou Coroa"
+                className={clsx(inputClass, "text-xs py-1")}
+                value={game.config?.customTitle || ''} 
+                onChange={e => {
+                  const val = e.target.value;
+                  updateGame(id, { config: { ...game.config, customTitle: val } });
+                }} 
+              />
+            </div>
+            <div>
+              <label className="block text-xs mb-1 text-neutral-400 font-semibold">Subtítulo para Convidados</label>
+              <input 
+                type="text" 
+                placeholder="Padrão: Clique na moeda..."
+                className={clsx(inputClass, "text-xs py-1")}
+                value={game.config?.customSubtitle || ''} 
+                onChange={e => {
+                  const val = e.target.value;
+                  updateGame(id, { config: { ...game.config, customSubtitle: val } });
+                }} 
+              />
+            </div>
+          </div>
           <div>
             <label className="block text-sm mb-1 text-neutral-400">Máximo de Giros</label>
             <input 
@@ -169,17 +204,17 @@ export const CoinFlipMinigameHost: React.FC<{ id: string, sessionListeners: Sess
                   )}
                   {progress.spinning && !progress.coinResult && (
                     <div className="flex items-center gap-2 mt-1 px-2 py-1.5 rounded text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                      <span className="animate-spin text-base">ðŸª™</span>
+                      <span className="animate-spin text-base">🪙</span>
                       <span>Girando...</span>
                     </div>
                   )}
                   {game.status === 'running' && progress.spinning && !progress.coinResult && (
                     <div className="flex gap-2 mt-2">
                       <button onClick={() => handleForceResult('heads')} className="flex-1 py-1.5 text-xs bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-400 border border-yellow-500/30 rounded transition-colors font-medium">
-                        âš¡ Forçar Cara
+                        ⚡ Forçar Cara
                       </button>
                       <button onClick={() => handleForceResult('tails')} className="flex-1 py-1.5 text-xs bg-zinc-600/20 hover:bg-zinc-600/40 text-zinc-400 border border-zinc-500/30 rounded transition-colors font-medium">
-                        âš¡ Forçar Coroa
+                        ⚡ Forçar Coroa
                       </button>
                     </div>
                   )}

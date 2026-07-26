@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { X, GripHorizontal } from 'lucide-react';
 import { useViewportResize } from '@/hooks/useViewportResize';
@@ -16,6 +16,7 @@ export default function Soundboard({ onInteraction, onClose, onItemContextMenu, 
     const dragControls = useDragControls();
 
     const { size, setSize, position, onDragEnd, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
+        menuId: 'soundboard',
         initialSize: { width: 320, height: 400 },
         initialPosition: { x: typeof window !== 'undefined' ? window.innerWidth - 340 : 800, y: 100 },
         minWidth: 280,

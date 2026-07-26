@@ -1,9 +1,10 @@
-﻿import React, { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { X, Minus } from 'lucide-react';
 import clsx from 'clsx';
 import { useThemeStore } from '@/store/themeStore';
 import { useMinigamesStore } from '@/store/minigamesStore';
+import { useCanvasGlobalStore } from '@/store/canvasStore';
 
 interface MinigameWindowProps {
   id: string;
@@ -14,10 +15,22 @@ interface MinigameWindowProps {
 export const MinigameWindow: React.FC<MinigameWindowProps> = ({ id, title, children }) => {
   const { theme } = useThemeStore();
   const { toggleMinimize, removeGame, activeGames } = useMinigamesStore();
+  const menuZIndices = useCanvasGlobalStore(state => state.menuZIndices);
+  const bringToFront = useCanvasGlobalStore(state => state.bringToFront);
   const game = activeGames.find(g => g.id === id);
   const dragControls = useDragControls();
 
   if (!game || game.isMinimized) return null;
+
+  const menuKey = `minigame-${id}`;
+  const menuPositions = useCanvasGlobalStore(state => state.menuPositions);
+  const setMenuPosition = useCanvasGlobalStore(state => state.setMenuPosition);
+  const zIndex = menuZIndices[menuKey] || 60;
+
+  const defaultX = typeof window !== 'undefined' ? window.innerWidth / 2 - 170 : 300;
+  const defaultY = typeof window !== 'undefined' ? window.innerHeight / 2 - 120 : 200;
+  const savedPos = menuPositions[menuKey];
+  const initialPos = { x: savedPos?.x ?? defaultX, y: savedPos?.y ?? defaultY };
 
   return (
     <motion.div
@@ -25,8 +38,16 @@ export const MinigameWindow: React.FC<MinigameWindowProps> = ({ id, title, child
       dragMomentum={false}
       dragControls={dragControls}
       dragListener={false}
-      initial={{ x: window.innerWidth / 2 - 150, y: window.innerHeight / 2 - 100 }}
-      style={{ position: 'fixed', zIndex: 1000 }}
+      initial={initialPos}
+      onDragEnd={(e, info) => {
+        setMenuPosition(menuKey, {
+          x: initialPos.x + info.offset.x,
+          y: initialPos.y + info.offset.y
+        });
+      }}
+      onPointerDownCapture={() => bringToFront(menuKey)}
+      onMouseDown={() => bringToFront(menuKey)}
+      style={{ position: 'fixed', zIndex }}
       className={clsx(
         "flex flex-col overflow-hidden resize",
         theme === 'ethereal' 
@@ -37,7 +58,10 @@ export const MinigameWindow: React.FC<MinigameWindowProps> = ({ id, title, child
     >
       {/* Title bar */}
       <div 
-        onPointerDown={(e) => dragControls.start(e)}
+        onPointerDown={(e) => {
+          bringToFront(menuKey);
+          dragControls.start(e);
+        }}
         className={clsx(
           "flex items-center justify-between p-3 border-b cursor-grab active:cursor-grabbing",
           theme === 'ethereal' ? "border-white/10 bg-white/5" : "border-neutral-800 bg-neutral-950"

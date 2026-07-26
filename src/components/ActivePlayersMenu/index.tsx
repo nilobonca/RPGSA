@@ -48,25 +48,16 @@ const ActivePlayersMenu: React.FC<ActivePlayersMenuProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
 
     // Fix Hydration Mismatch: Use safe server defaults
-    const { size, setSize, position, setPosition, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
+    const { size, setSize, position, setPosition, onDragEnd, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
+        menuId: 'activePlayers',
         initialSize: { width: 360, height: 400 },
-        initialPosition: { x: 0, y: 100 }, // Safe default
+        initialPosition: { x: 800, y: 100 },
         minWidth: 360,
         minHeight: 200
     });
 
     const masterVolume = useCanvasGlobalStore(state => state.masterVolume);
     const setMasterVolume = useCanvasGlobalStore(state => state.setMasterVolume);
-
-    useEffect(() => {
-        // Set actual position on client side only once mounted
-        if (typeof window !== 'undefined') {
-            setPosition((prev) => ({
-                ...prev,
-                x: window.innerWidth - 380
-            }));
-        }
-    }, [setPosition]);
 
 
 
@@ -239,6 +230,8 @@ const ActivePlayersMenu: React.FC<ActivePlayersMenuProps> = ({
             dragListener={false}
             dragControls={dragControls}
             dragMomentum={false}
+            onDragEnd={onDragEnd}
+            dragConstraints={constraintRef}
             className={`absolute flex flex-col bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-2xl shadow-2xl shadow-black/10 overflow-hidden pointer-events-auto p-4 animate-in fade-in zoom-in-95`}
             onContextMenu={(e) => e.preventDefault()}
             onPointerDownCapture={onInteraction}

@@ -29,21 +29,13 @@ const ListenersMenu: React.FC<ListenersMenuProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const { guestMasterVolume, setGuestMasterVolume } = useCanvasGlobalStore();
 
-    const { size, setSize, position, setPosition, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
+    const { size, setSize, position, setPosition, onDragEnd, handleResizeStart, constraintRef, x, y, width, height } = useViewportResize({
+        menuId: 'listeners',
         initialSize: { width: 300, height: 380 },
-        initialPosition: { x: 0, y: 100 }, // Will set dynamically on mount
+        initialPosition: { x: typeof window !== 'undefined' ? window.innerWidth - 340 : 800, y: 150 },
         minWidth: 260,
         minHeight: 220
     });
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setPosition({
-                x: window.innerWidth - 340,
-                y: 150
-            });
-        }
-    }, [setPosition]);
 
     const menuRef = React.useRef<HTMLDivElement>(null);
 
@@ -183,6 +175,7 @@ const ListenersMenu: React.FC<ListenersMenuProps> = ({
             dragControls={dragControls}
             dragMomentum={false}
             dragElastic={0}
+            onDragEnd={onDragEnd}
             dragConstraints={constraintRef}
             className={`absolute flex flex-col bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-gray-200/50 dark:border-white/10 rounded-sm shadow-2xl overflow-hidden pointer-events-auto p-4 animate-in fade-in zoom-in-95 duration-200`}
             onContextMenu={(e) => e.preventDefault()}
