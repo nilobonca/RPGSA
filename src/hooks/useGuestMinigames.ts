@@ -252,6 +252,18 @@ export function useGuestMinigames({
             setGameOver(false);
             setTimeLeft(payload.config?.timeLimit || 0);
           }
+        } else if (payload.gameType === 'dial_lock') {
+          const permissions = payload.config?.permissions || {};
+          const userPerms = permissions[listenerId] || { canSee: true, canInteract: true };
+
+          if (userPerms.canSee) {
+            setIsClickerActive(true);
+            setIsFadingOut(false);
+            setClickerConfig(payload);
+            setClickerPermissions(userPerms);
+            setLocalClicks(0);
+            setGameOver(false);
+          }
         } else {
           const permissions = payload.config?.permissions || {};
           const userPerms = permissions[listenerId] || { canSee: true, canInteract: true };

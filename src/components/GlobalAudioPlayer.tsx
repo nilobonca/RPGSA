@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useIDB } from '@/utils/indexedDB';
-import { getSharedAudioContext, resumeAudioContext } from '@/utils/audio/audioContext';
+import { getSharedAudioContext, getMasterAudioNodes, resumeAudioContext } from '@/utils/audio/audioContext';
 import { ActiveGlobalTrack } from '@/interfaces/utils/indexedDB';
 import { useCanvasGlobalStore } from '@/store/canvasStore';
 import { useThemeStore } from '@/store/themeStore';
@@ -12,7 +12,7 @@ interface GlobalAudioPlayerProps {
 }
 
 export default function GlobalAudioPlayer({ activeGlobalTracks, isPreviewInstance, isHiddenReal }: GlobalAudioPlayerProps) {
-    const { savedAudios } = useIDB();
+    const { savedAudios, updateGlobalTrackPersisted } = useIDB();
     const masterVolume = useCanvasGlobalStore(state => state.masterVolume);
     const audioRefs = useRef<{ [id: string]: HTMLAudioElement }>({});
     const gainNodesRefs = useRef<{ [id: string]: GainNode }>({});
@@ -23,6 +23,36 @@ export default function GlobalAudioPlayer({ activeGlobalTracks, isPreviewInstanc
     const audioVizColor = useThemeStore(state => state.audioVizColor);
     const audioVizIntensity = useThemeStore(state => state.audioVizIntensity);
     const hasAnyPlaying = activeGlobalTracks.some(t => t.isPlaying);
+
+    // Fast panic event handler: fade out and pause all tracks
+    useEffect(() => {
+        const handlePanic = () => {
+            const ctx = getSharedAudioContext();
+            activeGlobalTracks.forEach(track => {
+                const gainNode = gainNodesRefs.current[track.id];
+                const audioElement = audioRefs.current[track.id];
+                if (gainNode && ctx) {
+                    try {
+                        gainNode.gain.cancelScheduledValues(ctx.currentTime);
+                        gainNode.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.03);
+                    } catch (e) {
+                        gainNode.gain.value = 0.0001;
+                    }
+                }
+                if (audioElement) {
+                    setTimeout(() => {
+                        audioElement.pause();
+                    }, 180);
+                }
+                if (track.isPlaying) {
+                    updateGlobalTrackPersisted({ ...track, isPlaying: false });
+                }
+            });
+        };
+
+        window.addEventListener('rpgsa-audio-panic', handlePanic);
+        return () => window.removeEventListener('rpgsa-audio-panic', handlePanic);
+    }, [activeGlobalTracks, updateGlobalTrackPersisted]);
 
     // Animation loop: read waveform from AnalyserNode
     useEffect(() => {
@@ -144,9 +174,15 @@ export default function GlobalAudioPlayer({ activeGlobalTracks, isPreviewInstanc
                                                 const gainNode = ctx.createGain();
                                                 gainNode.gain.value = 0;
 
+                                                const { masterAnalyser } = getMasterAudioNodes();
+
                                                 sourceNode.connect(analyser);
                                                 analyser.connect(gainNode);
-                                                gainNode.connect(ctx.destination);
+                                                if (masterAnalyser) {
+                                                    gainNode.connect(masterAnalyser);
+                                                } else {
+                                                    gainNode.connect(ctx.destination);
+                                                }
 
                                                 anyEl.__webAudioConnected = true;
                                                 anyEl.__analyser = analyser;

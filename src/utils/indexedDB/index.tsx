@@ -121,6 +121,7 @@ export const IDBProvider = ({ children }: { children: ReactNode }) => {
     const flushUpdates = useCallback(() => {
         const currentDb = dbRef.current;
         if (!currentDb || pendingUpdatesRef.current.size === 0) return;
+        if (!currentDb.objectStoreNames.contains('persistedCanvas')) return;
         const transaction = currentDb.transaction(['persistedCanvas'], 'readwrite');
         const store = transaction.objectStore('persistedCanvas');
         
@@ -148,6 +149,7 @@ export const IDBProvider = ({ children }: { children: ReactNode }) => {
     const deleteItemPersisted = useCallback((id: string) => {
         const currentDb = dbRef.current;
         if (isPreviewModeRef.current || !currentDb) return;
+        if (!currentDb.objectStoreNames.contains('persistedCanvas')) return;
         const transaction = currentDb.transaction(['persistedCanvas'], 'readwrite');
         const store = transaction.objectStore('persistedCanvas');
         store.delete(id);
@@ -203,6 +205,10 @@ export const IDBProvider = ({ children }: { children: ReactNode }) => {
 
     const loadCanvas = useCallback((database: IDBDatabase) => {
         return new Promise<void>((resolve) => {
+            if (!database.objectStoreNames.contains('persistedCanvas')) {
+                resolve();
+                return;
+            }
             const transaction = database.transaction(['persistedCanvas'], 'readonly');
             const store = transaction.objectStore('persistedCanvas');
             const request = store.getAll();

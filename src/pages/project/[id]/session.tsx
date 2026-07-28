@@ -22,6 +22,20 @@ export default function ListenerSession() {
     const [chatSoundEnabled, setChatSoundEnabled] = useState(true);
     const chatSoundEnabledRef = useRef(true);
 
+    React.useEffect(() => {
+        if (projectId && typeof window !== 'undefined') {
+            try {
+                const saved = localStorage.getItem(`rpgsa_guest_session_${projectId}`);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    if (data?.username) {
+                        setUsername(data.username);
+                    }
+                }
+            } catch (e) {}
+        }
+    }, [projectId]);
+
     const {
         showSpectrogram,
         setShowSpectrogram,
@@ -54,6 +68,7 @@ export default function ListenerSession() {
         channelRef,
         connectToGM,
         disconnectFromGM,
+        updateUsername,
         handleSendMessage
     } = useWebRTCGuestSession({
         projectId,
@@ -64,6 +79,11 @@ export default function ListenerSession() {
         isMuted,
         guestVolume
     });
+
+    const handleUpdateUsername = useCallback((newName: string) => {
+        setUsername(newName);
+        updateUsername(newName);
+    }, [updateUsername]);
 
     const minigames = useGuestMinigames({
         channelRef,
@@ -121,6 +141,7 @@ export default function ListenerSession() {
                         isDiceTrayOpen={isDiceTrayOpen}
                         onToggleDiceTray={() => setIsDiceTrayOpen(!isDiceTrayOpen)}
                         onLeave={disconnectFromGM}
+                        onUpdateUsername={handleUpdateUsername}
                     />
 
                     {/* Floating Dice Tray */}
@@ -196,6 +217,7 @@ export default function ListenerSession() {
                         onMinigameClick={minigames.handleMinigameClick}
                         onCoinClick={minigames.handleCoinClick}
                         onCardClick={minigames.handleCardClick}
+                        onMinigameProgress={minigames.sendClickProgress}
                     />
                 </div>
             )}

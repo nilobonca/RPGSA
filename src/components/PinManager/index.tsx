@@ -51,14 +51,20 @@ export const PinManager: React.FC<PinManagerProps> = ({ pins, onToggle, onRename
             dragElastic={0}
             onDragEnd={onDragEnd}
             dragConstraints={constraintRef}
-            className={`absolute flex flex-col bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-2xl shadow-2xl shadow-black/10 overflow-hidden pointer-events-auto p-4 animate-in fade-in zoom-in-95`}
+            className={`absolute flex flex-col bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-2xl shadow-2xl shadow-black/10 overflow-hidden pointer-events-auto p-4 select-none`}
             onContextMenu={(e) => e.preventDefault()}
             onPointerDownCapture={onInteraction}
         >
-            <div className={`flex flex-col h-full block`}>
+            <div className={`flex flex-col h-full block select-none`}>
                 <div
-                    className="w-full flex justify-between items-center mb-3 relative flex-shrink-0 touch-none cursor-move group/header"
-                    onPointerDown={(e) => dragControls.start(e)}
+                    className="w-full flex justify-between items-center mb-3 relative flex-shrink-0 touch-none cursor-move group/header select-none"
+                    onPointerDown={(e) => {
+                        window.getSelection()?.removeAllRanges();
+                        document.body.style.userSelect = 'none';
+                        document.body.style.webkitUserSelect = 'none';
+                        if (e.cancelable) e.preventDefault();
+                        dragControls.start(e);
+                    }}
                 >
                     <span className="font-semibold text-gray-700 dark:text-neutral-200">Pins</span>
                     <div className="flex items-center gap-2">

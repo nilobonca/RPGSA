@@ -102,31 +102,38 @@ export function useIDBConnection(params: UseIDBConnectionParams) {
 
     const deleteAll = useCallback(() => {
         if (!db) return;
-        const transaction = db.transaction(['audios', 'images', 'persistedCanvas', 'soundboard'], 'readwrite');
-        transaction.objectStore('audios').clear();
-        transaction.objectStore('images').clear();
+        const storesToClear = ['audios', 'images', 'persistedCanvas', 'soundboard'].filter(s => db.objectStoreNames.contains(s));
+        if (storesToClear.length === 0) {
+            setSavedAudios([]);
+            return;
+        }
+        const transaction = db.transaction(storesToClear, 'readwrite');
+        if (db.objectStoreNames.contains('audios')) transaction.objectStore('audios').clear();
+        if (db.objectStoreNames.contains('images')) transaction.objectStore('images').clear();
 
-        const canvasStore = transaction.objectStore('persistedCanvas');
-        const canvasRequest = canvasStore.openCursor();
-        canvasRequest.onsuccess = (event) => {
-            const cursor = (event.target as IDBRequest).result as IDBCursorWithValue;
-            if (cursor) {
-                const value = cursor.value;
-                if (!(value.type === 'group')) {
-                    cursor.delete();
+        if (db.objectStoreNames.contains('persistedCanvas')) {
+            const canvasStore = transaction.objectStore('persistedCanvas');
+            const canvasRequest = canvasStore.openCursor();
+            canvasRequest.onsuccess = (event) => {
+                const cursor = (event.target as IDBRequest).result as IDBCursorWithValue;
+                if (cursor) {
+                    const value = cursor.value;
+                    if (!(value.type === 'group')) {
+                        cursor.delete();
+                    }
+                    cursor.continue();
                 }
-                cursor.continue();
-            }
-        };
+            };
+        }
 
-        if (transaction.objectStoreNames.contains('soundboard')) {
+        if (db.objectStoreNames.contains('soundboard')) {
             transaction.objectStore('soundboard').clear();
         }
         setSavedAudios([]);
     }, [db, setSavedAudios]);
 
     const resetCanvas = useCallback((pageId?: string) => {
-        if (!db) return;
+        if (!db || !db.objectStoreNames.contains('persistedCanvas')) return;
         const idsToDelete = new Set<string>();
         if (pageId) {
             const collectIds = (parentId: string) => {
@@ -188,7 +195,7 @@ export function useIDBConnection(params: UseIDBConnectionParams) {
     }, [setMessage]);
 
     const restoreCanvasState = useCallback(async (state: any) => {
-        if (!db) return;
+        if (!db || !db.objectStoreNames.contains('persistedCanvas')) return;
         const transaction = db.transaction(['persistedCanvas'], 'readwrite');
         const store = transaction.objectStore('persistedCanvas');
         store.clear();
@@ -213,7 +220,7 @@ export function useIDBConnection(params: UseIDBConnectionParams) {
     useEffect(() => {
         if (typeof window === 'undefined') return;
         const initDB = () => {
-            const request = window.indexedDB.open('RPGSA_DB', 9);
+            const request = window.indexedDB.open('RPGSA_DB', 10);
             request.onerror = (event) => console.error('Erro ao abrir IndexedDB');
             request.onsuccess = (event) => {
                 const database = (event.target as IDBOpenDBRequest).result;

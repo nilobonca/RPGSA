@@ -1,12 +1,13 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import { 
-  Layers, Edit2, ArrowLeft, MapPin, History, Music, LayoutGrid, PenTool, MousePointer2, Globe, Headphones, Settings, Gamepad2, Coins
+  Layers, Edit2, ArrowLeft, MapPin, History, Music, LayoutGrid, PenTool, MousePointer2, Globe, Headphones, Settings, Gamepad2, Coins, KeyRound
 } from 'lucide-react';
 import { useMinigamesStore } from '@/store/minigamesStore';
 import { ClickerMinigameHost } from './ClickerMinigameHost';
 import { CoinFlipMinigameHost } from './CoinFlipMinigameHost';
 import { CardsMinigameHost } from './CardsMinigameHost';
+import { DialLockpickerHost } from './DialLockpickerHost';
 import { useThemeStore } from '@/store/themeStore';
 import clsx from 'clsx';
 import { useCanvasUI } from '@/hooks/useCanvasUI';
@@ -395,6 +396,8 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
           return <CoinFlipMinigameHost key={game.id} id={game.id} sessionListeners={sessionListeners} />;
         } else if (game.gameId === 'cards') {
           return <CardsMinigameHost key={game.id} id={game.id} sessionListeners={sessionListeners} />;
+        } else if (game.gameId === 'dial_lock') {
+          return <DialLockpickerHost key={game.id} id={game.id} sessionListeners={sessionListeners} />;
         }
         return <ClickerMinigameHost key={game.id} id={game.id} sessionListeners={sessionListeners} />;
       })}
@@ -556,6 +559,27 @@ export const ProjectCanvasMenus: React.FC<ProjectCanvasMenusProps> = ({
             title="Novo Jogo de Cartas"
           >
             <Gamepad2 size={20} className={isEthereal ? "" : "text-gray-700 dark:text-neutral-200"} />
+          </button>
+        )}
+
+        {/* Add Dial Lock Toggle */}
+        {pinnedMinigames?.includes('dial_lock') && (
+          <button
+            onClick={() => {
+              const newId = `dial_lock_${Date.now()}`;
+              useMinigamesStore.getState().addGame({
+                id: newId,
+                gameId: 'dial_lock',
+                title: 'Lockpicker de Precisão',
+                isMinimized: false,
+                status: 'idle',
+                config: { stages: 3, tolerance: 6, maxAttempts: 5, permissions: {} }
+              });
+            }}
+            className={buttonClass}
+            title="Novo Lockpicker de Precisão"
+          >
+            <KeyRound size={20} className={isEthereal ? "text-amber-400" : "text-amber-500"} />
           </button>
         )}
 

@@ -323,10 +323,20 @@ export const useWebRTCAudioStreamer = ({
                   [listenerId]: rtt
                 }));
               }
+            } else if (data.type === 'update_guest_name') {
+              const { name: newName } = data.payload || {};
+              if (newName) {
+                if (conn.metadata) conn.metadata.name = newName;
+                if (setSessionListeners) {
+                  setSessionListeners(prev => prev.map(l => l.listenerId === listenerId ? { ...l, name: newName } : l));
+                }
+              }
             } else if (data.type === 'coin_spinning') {
-              useMinigamesStore.getState().setSpinning(listenerId, data.payload.spinning, name);
+              const currentName = (conn.metadata as any)?.name || name;
+              useMinigamesStore.getState().setSpinning(listenerId, data.payload.spinning, currentName);
             } else if (data.type === 'minigame_progress') {
-              useMinigamesStore.getState().updateProgress(listenerId, data.payload.clicks, name, data.payload.coinResult, data.payload.cardResult);
+              const currentName = (conn.metadata as any)?.name || name;
+              useMinigamesStore.getState().updateProgress(listenerId, data.payload.clicks, currentName, data.payload.coinResult, data.payload.cardResult);
               const store = useMinigamesStore.getState();
               const clickerGame = store.activeGames.find(g => g.gameId === 'clicker' && g.status === 'running');
               if (clickerGame && clickerGame.config?.isCooperative) {

@@ -139,8 +139,19 @@ export const useViewportResize = ({ menuId, initialSize, initialPosition, minWid
         return () => window.removeEventListener('resize', handleResize);
     }, [isMounted, minWidth, minHeight, margin, clampPosition, calculateAbsolute]);
 
+    // Helper to start header drag cleanly without text selection or stutter
+    const startDragHeader = useCallback((e: React.PointerEvent, dragControls: any) => {
+        window.getSelection()?.removeAllRanges();
+        document.body.style.userSelect = 'none';
+        document.body.style.webkitUserSelect = 'none';
+        if (e.cancelable) e.preventDefault();
+        dragControls.start(e);
+    }, []);
+
     // After drag ends, sync React state with where framer-motion left the element and save to store
     const onDragEnd = (event: unknown, info: PanInfo) => {
+        document.body.style.userSelect = '';
+        document.body.style.webkitUserSelect = '';
         const newX = positionRef.current.x + x.get();
         const newY = positionRef.current.y + y.get();
         const clamped = clampPosition({ x: newX, y: newY }, sizeRef.current);
@@ -161,6 +172,10 @@ export const useViewportResize = ({ menuId, initialSize, initialPosition, minWid
     const handleResizeStart = useCallback((e: React.PointerEvent | React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        window.getSelection()?.removeAllRanges();
+        document.body.style.userSelect = 'none';
+        document.body.style.webkitUserSelect = 'none';
+
         const startX = e.clientX;
         const startY = e.clientY;
         const startWidth = sizeRef.current.width;
@@ -182,6 +197,8 @@ export const useViewportResize = ({ menuId, initialSize, initialPosition, minWid
         };
 
         const handlePointerUp = () => {
+            document.body.style.userSelect = '';
+            document.body.style.webkitUserSelect = '';
             if (rAF) cancelAnimationFrame(rAF);
             // Commit final size to React state on drag end and store
             const finalW = width.get();
@@ -215,5 +232,5 @@ export const useViewportResize = ({ menuId, initialSize, initialPosition, minWid
         bottom: typeof window !== 'undefined' ? window.innerHeight - size.height - margin - position.y : 0
     };
 
-    return { size, setSize, position, setPosition, onDragEnd, isDesktop, handleResizeStart, constraintRef, x, y, width, height };
+    return { size, setSize, position, setPosition, onDragEnd, isDesktop, handleResizeStart, constraintRef, x, y, width, height, startDragHeader };
 };

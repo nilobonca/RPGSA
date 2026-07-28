@@ -89,7 +89,7 @@ export function useIDBAssets(db: IDBDatabase | null, options: UseIDBAssetsOption
     const saveAudio = useCallback((file: File): Promise<Audios | undefined> => {
         return new Promise((resolve) => {
             const currentDb = dbRef.current;
-            if (!currentDb) {
+            if (!currentDb || !currentDb.objectStoreNames.contains('audios')) {
                 resolve(undefined);
                 return;
             }
@@ -126,7 +126,7 @@ export function useIDBAssets(db: IDBDatabase | null, options: UseIDBAssetsOption
 
     const deleteAudio = useCallback((id: number) => {
         const currentDb = dbRef.current;
-        if (!currentDb) return;
+        if (!currentDb || !currentDb.objectStoreNames.contains('audios')) return;
         const transaction = currentDb.transaction(['audios'], 'readwrite');
         const store = transaction.objectStore('audios');
         store.delete(id);
@@ -151,7 +151,7 @@ export function useIDBAssets(db: IDBDatabase | null, options: UseIDBAssetsOption
 
     const updateAudioPersisted = useCallback((audio: Audios) => {
         const currentDb = dbRef.current;
-        if (!currentDb) return;
+        if (!currentDb || !currentDb.objectStoreNames.contains('audios')) return;
         const transaction = currentDb.transaction(['audios'], 'readwrite');
         const store = transaction.objectStore('audios');
         store.put(audio);
@@ -163,7 +163,7 @@ export function useIDBAssets(db: IDBDatabase | null, options: UseIDBAssetsOption
     const saveImage = useCallback((file: File): Promise<Images | undefined> => {
         return new Promise((resolve) => {
             const currentDb = dbRef.current;
-            if (!currentDb) {
+            if (!currentDb || !currentDb.objectStoreNames.contains('images')) {
                 resolve(undefined);
                 return;
             }
@@ -200,7 +200,7 @@ export function useIDBAssets(db: IDBDatabase | null, options: UseIDBAssetsOption
 
     const deleteImage = useCallback((id: number) => {
         const currentDb = dbRef.current;
-        if (!currentDb) return;
+        if (!currentDb || !currentDb.objectStoreNames.contains('images')) return;
         const transaction = currentDb.transaction(['images'], 'readwrite');
         const store = transaction.objectStore('images');
         store.delete(id);
@@ -224,7 +224,7 @@ export function useIDBAssets(db: IDBDatabase | null, options: UseIDBAssetsOption
     const addAssetFolder = useCallback((name: string): Promise<AssetFolder | undefined> => {
         return new Promise((resolve) => {
             const currentDb = dbRef.current;
-            if (!currentDb) {
+            if (!currentDb || !currentDb.objectStoreNames.contains('asset_folders')) {
                 resolve(undefined);
                 return;
             }
@@ -247,7 +247,7 @@ export function useIDBAssets(db: IDBDatabase | null, options: UseIDBAssetsOption
 
     const updateAssetFolder = useCallback((folder: AssetFolder) => {
         const currentDb = dbRef.current;
-        if (!currentDb) return;
+        if (!currentDb || !currentDb.objectStoreNames.contains('asset_folders')) return;
         const transaction = currentDb.transaction(['asset_folders'], 'readwrite');
         const store = transaction.objectStore('asset_folders');
         store.put(folder);
@@ -258,7 +258,7 @@ export function useIDBAssets(db: IDBDatabase | null, options: UseIDBAssetsOption
 
     const deleteAssetFolder = useCallback((id: string) => {
         const currentDb = dbRef.current;
-        if (!currentDb) return;
+        if (!currentDb || !currentDb.objectStoreNames.contains('asset_folders')) return;
         const transaction = currentDb.transaction(['asset_folders'], 'readwrite');
         const store = transaction.objectStore('asset_folders');
         store.delete(id);
@@ -272,7 +272,7 @@ export function useIDBAssets(db: IDBDatabase | null, options: UseIDBAssetsOption
         setSavedAudios(updatedAudios);
 
         const currentDb = dbRef.current;
-        if (!currentDb) return;
+        if (!currentDb || !currentDb.objectStoreNames.contains('audios')) return;
         const transaction = currentDb.transaction(['audios'], 'readwrite');
         const store = transaction.objectStore('audios');
         updatedAudios.forEach(audio => {
@@ -287,7 +287,7 @@ export function useIDBAssets(db: IDBDatabase | null, options: UseIDBAssetsOption
         setSavedImages(updatedImages);
 
         const currentDb = dbRef.current;
-        if (!currentDb) return;
+        if (!currentDb || !currentDb.objectStoreNames.contains('images')) return;
         const transaction = currentDb.transaction(['images'], 'readwrite');
         const store = transaction.objectStore('images');
         updatedImages.forEach(image => {

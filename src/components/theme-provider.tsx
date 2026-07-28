@@ -1,6 +1,6 @@
-﻿import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "dark" | "light" | "system";
+export type Theme = "dark" | "light" | "system" | "ethereal" | "grimdark" | "cyber" | "taverna";
 
 type ThemeProviderProps = {
     children: React.ReactNode;
@@ -14,7 +14,7 @@ type ThemeProviderState = {
 };
 
 const initialState: ThemeProviderState = {
-    theme: "system",
+    theme: "ethereal",
     setTheme: () => null,
 };
 
@@ -22,7 +22,7 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
     children,
-    defaultTheme = "system",
+    defaultTheme = "ethereal",
     storageKey = "vite-ui-theme",
 }: ThemeProviderProps) {
     const [theme, setTheme] = useState<Theme>(() => {
@@ -35,7 +35,7 @@ export function ThemeProvider({
     useEffect(() => {
         const root = window.document.documentElement;
 
-        root.classList.remove("light", "dark");
+        root.classList.remove("light", "dark", "ethereal", "grimdark", "cyber", "taverna");
 
         if (theme === "system") {
             const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
@@ -47,7 +47,11 @@ export function ThemeProvider({
             return;
         }
 
-        root.classList.add(theme);
+        if (theme === "ethereal" || theme === "grimdark" || theme === "cyber" || theme === "taverna") {
+            root.classList.add("dark", theme);
+        } else {
+            root.classList.add(theme);
+        }
     }, [theme]);
 
     const value = {

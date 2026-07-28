@@ -152,7 +152,7 @@ export function useIDBCanvasState(
         setSavedAudios(updatedAudios);
 
         const currentDb = dbRef.current;
-        if (!currentDb) return;
+        if (!currentDb || !currentDb.objectStoreNames.contains('audios')) return;
         const transaction = currentDb.transaction(['audios'], 'readwrite');
         const store = transaction.objectStore('audios');
         updatedAudios.forEach(audio => {
@@ -167,7 +167,7 @@ export function useIDBCanvasState(
         setSavedImages(updatedImages);
 
         const currentDb = dbRef.current;
-        if (!currentDb) return;
+        if (!currentDb || !currentDb.objectStoreNames.contains('images')) return;
         const transaction = currentDb.transaction(['images'], 'readwrite');
         const store = transaction.objectStore('images');
         updatedImages.forEach(image => {
@@ -360,7 +360,7 @@ export function useIDBCanvasState(
     }, [deleteItemPersisted, setActiveImages, setActiveLayers]);
 
     const addSoundboardItem = useCallback((item: SoundboardItem) => {
-        if (!db) return;
+        if (!db || !db.objectStoreNames.contains('soundboard')) return;
         const transaction = db.transaction(['soundboard'], 'readwrite');
         const store = transaction.objectStore('soundboard');
         store.add(item);
@@ -368,7 +368,7 @@ export function useIDBCanvasState(
     }, [db]);
 
     const updateSoundboardItem = useCallback((item: SoundboardItem) => {
-        if (!db) return;
+        if (!db || !db.objectStoreNames.contains('soundboard')) return;
         const transaction = db.transaction(['soundboard'], 'readwrite');
         const store = transaction.objectStore('soundboard');
         store.put(item);
@@ -376,7 +376,7 @@ export function useIDBCanvasState(
     }, [db]);
 
     const deleteSoundboardItem = useCallback((id: string) => {
-        if (!db) return;
+        if (!db || !db.objectStoreNames.contains('soundboard')) return;
         const transaction = db.transaction(['soundboard'], 'readwrite');
         const store = transaction.objectStore('soundboard');
         store.delete(id);

@@ -198,6 +198,12 @@ export const useCanvasAudioSession = (
                   [listenerId]: rtt
                 }));
               }
+            } else if (data.type === 'update_guest_name') {
+              const { name: newName } = data.payload || {};
+              if (newName) {
+                setSessionListeners(prev => prev.map(l => l.listenerId === listenerId ? { ...l, name: newName } : l));
+                if (conn.metadata) conn.metadata.name = newName;
+              }
             }
           });
 

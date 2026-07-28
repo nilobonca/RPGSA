@@ -1,15 +1,17 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export type ThemeType = 'ethereal' | 'grimdark' | 'cyber' | 'taverna' | 'dark' | 'light' | 'default';
+
 type ThemeState = {
-  theme: 'default' | 'ethereal';
+  theme: ThemeType;
   isSettingsOpen: boolean;
   audioVizEnabled: boolean;
   audioVizColor: string;
   audioVizIntensity: number; // 0.0 to 2.0, default 1.0
   areaRippleEnabled: boolean;
   pinnedMinigames: string[];
-  setTheme: (theme: 'default' | 'ethereal') => void;
+  setTheme: (theme: ThemeType) => void;
   toggleTheme: () => void;
   setIsSettingsOpen: (isOpen: boolean) => void;
   setAudioVizEnabled: (enabled: boolean) => void;
@@ -22,7 +24,7 @@ type ThemeState = {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      theme: 'default',
+      theme: 'ethereal',
       isSettingsOpen: false,
       audioVizEnabled: true,
       audioVizColor: '#818cf8', // indigo-400
@@ -30,7 +32,7 @@ export const useThemeStore = create<ThemeState>()(
       areaRippleEnabled: true,
       pinnedMinigames: [], 
       setTheme: (theme) => set({ theme }),
-      toggleTheme: () => set((state) => ({ theme: state.theme === 'default' ? 'ethereal' : 'default' })),
+      toggleTheme: () => set((state) => ({ theme: state.theme === 'ethereal' ? 'default' : 'ethereal' })),
       setIsSettingsOpen: (isOpen) => set({ isSettingsOpen: isOpen }),
       setAudioVizEnabled: (enabled) => set({ audioVizEnabled: enabled }),
       setAudioVizColor: (color) => set({ audioVizColor: color }),

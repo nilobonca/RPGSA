@@ -189,7 +189,7 @@ const HeaderCab: React.FC<HeaderProps> = ({
     }
   }
 
-  const { size, position, handleResizeStart, onDragEnd, width, height } = useViewportResize({
+  const { size, position, handleResizeStart, onDragEnd, width, height, x, y } = useViewportResize({
     menuId: 'header',
     initialSize: { width: 300, height: 500 },
     initialPosition: { x: 16, y: 80 },
@@ -652,8 +652,10 @@ const HeaderCab: React.FC<HeaderProps> = ({
         width: width,
         height: height,
         maxHeight: '80vh',
-        x: position.x,
-        y: position.y,
+        left: position.x,
+        top: position.y,
+        x,
+        y,
         zIndex: 500,
       }}
       drag
@@ -661,14 +663,20 @@ const HeaderCab: React.FC<HeaderProps> = ({
       dragControls={dragControls}
       dragMomentum={false}
       onDragEnd={onDragEnd}
-      className={`absolute flex flex-col bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-2xl shadow-2xl shadow-black/10 overflow-hidden pointer-events-auto p-5 animate-in fade-in zoom-in-95`}
+      className={`absolute flex flex-col bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-2xl shadow-2xl shadow-black/10 overflow-hidden pointer-events-auto p-5 select-none`}
       onPointerDownCapture={onInteraction}
     >
       {/* Expanded View */}
-      <div className={`flex flex-col h-full block`}>
+      <div className={`flex flex-col h-full block select-none`}>
         <div
-          className="w-full flex justify-between items-center mb-2 relative flex-shrink-0 touch-none cursor-move group/header"
-          onPointerDown={(e) => dragControls.start(e)}
+          className="w-full flex justify-between items-center mb-2 relative flex-shrink-0 touch-none cursor-move group/header select-none"
+          onPointerDown={(e) => {
+            window.getSelection()?.removeAllRanges();
+            document.body.style.userSelect = 'none';
+            document.body.style.webkitUserSelect = 'none';
+            if (e.cancelable) e.preventDefault();
+            dragControls.start(e);
+          }}
         >
           <div className="flex items-center gap-2 px-1">
             <div className="w-8 h-1 rounded-full bg-gray-300 dark:bg-neutral-600 transition-colors group-hover/header:bg-violet-400" />

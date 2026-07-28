@@ -1,4 +1,4 @@
-﻿import "@/styles/globals.css";
+import "@/styles/globals.css";
 import { IDBProvider } from "@/utils/indexedDB";
 import { LogSystemProvider } from "@/utils/logSystem";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -29,14 +29,27 @@ export default function App({ Component, pageProps }: AppProps) {
     };
   }, []);
 
-  const activeTheme = mounted ? theme : 'default';
+  const activeTheme = mounted ? theme : 'ethereal';
+
+  useEffect(() => {
+    if (!mounted) return;
+    const root = document.documentElement;
+    root.classList.remove('light', 'dark', 'ethereal', 'grimdark', 'cyber', 'taverna');
+    if (activeTheme === 'ethereal' || activeTheme === 'grimdark' || activeTheme === 'cyber' || activeTheme === 'taverna') {
+      root.classList.add('dark', activeTheme);
+    } else if (activeTheme === 'dark') {
+      root.classList.add('dark');
+    } else if (activeTheme === 'light') {
+      root.classList.add('light');
+    }
+  }, [activeTheme, mounted]);
 
   return (
     <LogSystemProvider>
-      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <ThemeProvider defaultTheme="ethereal" storageKey="vite-ui-theme">
         <PollsProvider>
             <IDBProvider>
-              <div className={clsx("min-h-screen transition-colors duration-500", activeTheme === 'ethereal' ? 'ethereal bg-[#050505]' : 'bg-neutral-950')}>
+              <div className={clsx("min-h-screen transition-colors duration-500", activeTheme, activeTheme === 'default' ? 'bg-neutral-950' : '')}>
                 <Component {...pageProps} />
                 <FeedbackWidget />
                 

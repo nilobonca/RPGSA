@@ -1,5 +1,5 @@
-import React from 'react';
-import { Activity, LogOut, Wifi, Dices } from 'lucide-react';
+import React, { useState } from 'react';
+import { Activity, LogOut, Wifi, Dices, Pencil, Check, X } from 'lucide-react';
 
 interface GuestTopBarProps {
     username: string;
@@ -8,6 +8,7 @@ interface GuestTopBarProps {
     isDiceTrayOpen: boolean;
     onToggleDiceTray: () => void;
     onLeave: () => void;
+    onUpdateUsername?: (newName: string) => void;
 }
 
 export const GuestTopBar: React.FC<GuestTopBarProps> = ({
@@ -16,8 +17,33 @@ export const GuestTopBar: React.FC<GuestTopBarProps> = ({
     activeCount,
     isDiceTrayOpen,
     onToggleDiceTray,
-    onLeave
+    onLeave,
+    onUpdateUsername
 }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState(username);
+
+    const handleSave = () => {
+        const trimmed = editValue.trim();
+        if (trimmed && trimmed !== username && onUpdateUsername) {
+            onUpdateUsername(trimmed);
+        }
+        setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+        setEditValue(username);
+        setIsEditing(false);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleSave();
+        } else if (e.key === 'Escape') {
+            handleCancel();
+        }
+    };
+
     return (
         <div className="flex items-center justify-between border-b border-neutral-800/80 pb-4 mb-6">
             <div className="flex items-center gap-3">
@@ -26,7 +52,50 @@ export const GuestTopBar: React.FC<GuestTopBarProps> = ({
                     <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
                 </span>
                 <div>
-                    <h3 className="font-semibold text-white tracking-tight leading-none text-sm">{username}</h3>
+                    {isEditing ? (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                            <input
+                                type="text"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                autoFocus
+                                className="bg-neutral-900 border border-neutral-700 focus:border-indigo-500 rounded px-2 py-0.5 text-sm font-semibold text-white focus:outline-none w-40"
+                                placeholder="Seu nome"
+                                maxLength={24}
+                            />
+                            <button
+                                onClick={handleSave}
+                                className="p-1 bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 rounded border border-emerald-500/30 transition-colors"
+                                title="Salvar nome"
+                            >
+                                <Check size={14} />
+                            </button>
+                            <button
+                                onClick={handleCancel}
+                                className="p-1 bg-neutral-800 text-neutral-400 hover:text-white rounded transition-colors"
+                                title="Cancelar"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-1.5 group">
+                            <h3 className="font-semibold text-white tracking-tight leading-none text-sm">{username}</h3>
+                            {onUpdateUsername && (
+                                <button
+                                    onClick={() => {
+                                        setEditValue(username);
+                                        setIsEditing(true);
+                                    }}
+                                    className="opacity-60 group-hover:opacity-100 text-neutral-400 hover:text-indigo-400 transition-all p-0.5 rounded cursor-pointer"
+                                    title="Alterar seu nome"
+                                >
+                                    <Pencil size={12} />
+                                </button>
+                            )}
+                        </div>
+                    )}
                     <span className="text-[10px] text-neutral-400 uppercase tracking-widest mt-1 block">Ouvinte Conectado</span>
                 </div>
             </div>

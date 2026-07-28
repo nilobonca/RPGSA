@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useThemeStore } from '@/store/themeStore';
-import { X, Check, DownloadCloud, UploadCloud, MessageSquareText, Palette, Monitor, Database, Keyboard, Gamepad2 } from 'lucide-react';
+import { X, Check, DownloadCloud, UploadCloud, MessageSquareText, Palette, Monitor, Database, Keyboard, Gamepad2, KeyRound } from 'lucide-react';
 import clsx from 'clsx';
 import { useRouter } from 'next/router';
 import { useIDB } from '@/utils/indexedDB';
@@ -165,44 +165,121 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     <div className="space-y-8">
       <div>
         <h3 className={clsx("mb-4 text-sm font-semibold tracking-wide uppercase", theme === 'ethereal' ? "text-neutral-500" : "text-neutral-400")}>
-          Tema
+          Atmosfera de Tema
         </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            onClick={() => setTheme('default')}
-            className={clsx(
-              "relative flex flex-col items-start p-4 text-left border transition-all duration-300 group",
-              theme === 'default'
-                ? "border-blue-500 bg-blue-500/10"
-                : "border-neutral-800 hover:border-neutral-600",
-              theme === 'ethereal' ? "rounded-[1.5rem]" : "rounded-lg"
-            )}
-          >
-            <div className="w-full h-24 mb-4 rounded bg-neutral-950 border border-neutral-800 p-2 flex flex-col gap-2">
-               <div className="w-1/2 h-4 rounded bg-neutral-800"></div>
-               <div className="w-full h-8 rounded bg-neutral-900 border border-neutral-800"></div>
-            </div>
-            <span className="font-medium text-neutral-200">Padrão</span>
-            <span className="text-xs text-neutral-500">Design original</span>
-            {theme === 'default' && <div className="absolute top-4 right-4 text-blue-500"><Check size={18} /></div>}
-          </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
             onClick={() => setTheme('ethereal')}
             className={clsx(
               "relative flex flex-col items-start p-4 text-left border transition-all duration-300 group",
               theme === 'ethereal'
-                ? "border-white/20 bg-white/5"
-                : "border-neutral-800 hover:border-neutral-600",
-              theme === 'ethereal' ? "rounded-[1.5rem]" : "rounded-lg"
+                ? "border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/10"
+                : "border-neutral-800 hover:border-neutral-600 bg-neutral-900/40",
+              "rounded-[1.25rem]"
             )}
           >
-            <div className="w-full h-24 mb-4 rounded-[1rem] bg-black border border-white/10 p-2 flex flex-col gap-2">
-               <div className="w-1/2 h-4 rounded-full bg-white/10"></div>
-               <div className="w-full h-8 rounded-full bg-white/5 border border-white/10"></div>
+            <div className="w-full h-20 mb-3 rounded-xl bg-black/60 border border-purple-500/30 p-2 flex flex-col gap-1.5 backdrop-blur-md">
+               <div className="w-1/2 h-3 rounded-full bg-purple-500/40"></div>
+               <div className="w-full h-7 rounded-lg bg-white/5 border border-white/10"></div>
             </div>
-            <span className="font-medium text-white">Ethereal Glass</span>
-            <span className="text-xs text-neutral-500">Luxo, dark tech, blur</span>
-            {theme === 'ethereal' && <div className="absolute top-4 right-4 text-white"><Check size={18} /></div>}
+            <span className="font-semibold text-white flex items-center gap-1.5">🌌 Ethereal Arcane</span>
+            <span className="text-xs text-neutral-400">Glassmorphism de luxo, roxo/azul profundo, blur</span>
+            {theme === 'ethereal' && <div className="absolute top-4 right-4 text-purple-400"><Check size={18} /></div>}
+          </button>
+
+          <button
+            onClick={() => setTheme('grimdark')}
+            className={clsx(
+              "relative flex flex-col items-start p-4 text-left border transition-all duration-300 group",
+              theme === 'grimdark'
+                ? "border-red-600 bg-red-950/30 shadow-lg shadow-red-600/10"
+                : "border-neutral-800 hover:border-neutral-600 bg-neutral-900/40",
+              "rounded-[1.25rem]"
+            )}
+          >
+            <div className="w-full h-20 mb-3 rounded-xl bg-[#0d0708] border border-red-900/50 p-2 flex flex-col gap-1.5">
+               <div className="w-1/2 h-3 rounded-full bg-red-700/60"></div>
+               <div className="w-full h-7 rounded-lg bg-red-950/40 border border-red-900/30"></div>
+            </div>
+            <span className="font-semibold text-white flex items-center gap-1.5">🩸 Grimdark Horror</span>
+            <span className="text-xs text-neutral-400">Escuro sombrio, acentos vermelho sangue e ferro</span>
+            {theme === 'grimdark' && <div className="absolute top-4 right-4 text-red-500"><Check size={18} /></div>}
+          </button>
+
+          <button
+            onClick={() => setTheme('cyber')}
+            className={clsx(
+              "relative flex flex-col items-start p-4 text-left border transition-all duration-300 group",
+              theme === 'cyber'
+                ? "border-cyan-400 bg-cyan-950/30 shadow-lg shadow-cyan-400/10"
+                : "border-neutral-800 hover:border-neutral-600 bg-neutral-900/40",
+              "rounded-[1.25rem]"
+            )}
+          >
+            <div className="w-full h-20 mb-3 rounded-xl bg-[#020d0d] border border-cyan-500/40 p-2 flex flex-col gap-1.5">
+               <div className="w-1/2 h-3 rounded-full bg-cyan-400/50"></div>
+               <div className="w-full h-7 rounded-lg bg-cyan-950/50 border border-cyan-500/30"></div>
+            </div>
+            <span className="font-semibold text-white flex items-center gap-1.5">⚡ Cyberpunk HUD</span>
+            <span className="text-xs text-neutral-400">Interface tática militar, fonte mono, ciano neon</span>
+            {theme === 'cyber' && <div className="absolute top-4 right-4 text-cyan-400"><Check size={18} /></div>}
+          </button>
+
+          <button
+            onClick={() => setTheme('taverna')}
+            className={clsx(
+              "relative flex flex-col items-start p-4 text-left border transition-all duration-300 group",
+              theme === 'taverna'
+                ? "border-amber-500 bg-amber-950/30 shadow-lg shadow-amber-500/10"
+                : "border-neutral-800 hover:border-neutral-600 bg-neutral-900/40",
+              "rounded-[1.25rem]"
+            )}
+          >
+            <div className="w-full h-20 mb-3 rounded-xl bg-[#1a1410] border border-amber-800/50 p-2 flex flex-col gap-1.5">
+               <div className="w-1/2 h-3 rounded-full bg-amber-500/50"></div>
+               <div className="w-full h-7 rounded-lg bg-amber-950/40 border border-amber-800/40"></div>
+            </div>
+            <span className="font-semibold text-white flex items-center gap-1.5">🕯️ Taverna Vintage</span>
+            <span className="text-xs text-neutral-400">Madeira aquecida, iluminação acolhedora de ocre</span>
+            {theme === 'taverna' && <div className="absolute top-4 right-4 text-amber-500"><Check size={18} /></div>}
+          </button>
+
+          <button
+            onClick={() => setTheme('dark')}
+            className={clsx(
+              "relative flex flex-col items-start p-4 text-left border transition-all duration-300 group",
+              theme === 'dark'
+                ? "border-slate-400 bg-slate-800/40"
+                : "border-neutral-800 hover:border-neutral-600 bg-neutral-900/40",
+              "rounded-[1.25rem]"
+            )}
+          >
+            <div className="w-full h-20 mb-3 rounded-xl bg-neutral-950 border border-neutral-800 p-2 flex flex-col gap-1.5">
+               <div className="w-1/2 h-3 rounded-full bg-neutral-700"></div>
+               <div className="w-full h-7 rounded-lg bg-neutral-900 border border-neutral-800"></div>
+            </div>
+            <span className="font-semibold text-white flex items-center gap-1.5">🌙 Dark Standard</span>
+            <span className="text-xs text-neutral-400">Modo escuro minimalista clássico</span>
+            {theme === 'dark' && <div className="absolute top-4 right-4 text-slate-300"><Check size={18} /></div>}
+          </button>
+
+          <button
+            onClick={() => setTheme('light')}
+            className={clsx(
+              "relative flex flex-col items-start p-4 text-left border transition-all duration-300 group",
+              theme === 'light'
+                ? "border-amber-400 bg-amber-400/10"
+                : "border-neutral-800 hover:border-neutral-600 bg-neutral-900/40",
+              "rounded-[1.25rem]"
+            )}
+          >
+            <div className="w-full h-20 mb-3 rounded-xl bg-white border border-gray-300 p-2 flex flex-col gap-1.5">
+               <div className="w-1/2 h-3 rounded-full bg-gray-300"></div>
+               <div className="w-full h-7 rounded-lg bg-gray-100 border border-gray-200"></div>
+            </div>
+            <span className="font-semibold text-white flex items-center gap-1.5">☀️ Light Studio</span>
+            <span className="text-xs text-neutral-400">Interface clara para estúdio e leitura diurna</span>
+            {theme === 'light' && <div className="absolute top-4 right-4 text-amber-400"><Check size={18} /></div>}
           </button>
         </div>
       </div>
@@ -630,6 +707,69 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </div>
           </div>
 
+          {/* Lockpicker de Precisao Minigame */}
+          <div className={clsx(
+            "p-6 rounded-2xl border transition-all",
+            theme === 'ethereal' ? "bg-white/5 border-white/10" : "bg-neutral-800/50 border-neutral-800"
+          )}>
+            <div className="flex items-center gap-4 mb-4">
+              <div className={clsx(
+                "p-3 rounded-xl",
+                theme === 'ethereal' ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-amber-500/10 text-amber-400"
+              )}>
+                <KeyRound size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-neutral-200">Lockpicker de Precisão</h3>
+                <span className="text-xs text-amber-400 font-medium">Novo</span>
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="pr-4">
+                  <h4 className="font-medium text-neutral-200">Decodificador de Fechaduras</h4>
+                  <p className="text-sm text-neutral-400 mt-1">
+                    Desafio tátil em 2 fases: sintonize o tremor da agulha para achar o ponto secreto e gire o cilindro como chave!
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    addGame({
+                      id: `dial_lock_${Date.now()}`,
+                      gameId: 'dial_lock',
+                      title: 'Lockpicker de Precisão',
+                      isMinimized: false,
+                      status: 'idle',
+                      config: { stages: 3, tolerance: 6, maxAttempts: 5, permissions: {} }
+                    });
+                    onClose();
+                  }}
+                  className={clsx(
+                    "px-4 py-2 font-medium transition-all text-sm rounded-lg whitespace-nowrap",
+                    theme === 'ethereal' ? "bg-white/10 hover:bg-white/20 text-white" : "bg-neutral-800 hover:bg-neutral-700 text-white"
+                  )}
+                >
+                  Novo Desafio
+                </button>
+              </div>
+              <div className="flex items-center justify-between pt-4 border-t border-neutral-800 dark:border-white/10">
+                <div className="text-sm text-neutral-400">Fixar botão no menu lateral</div>
+                <button
+                  onClick={() => useThemeStore.getState().togglePinnedMinigame('dial_lock')}
+                  className={clsx(
+                    "relative w-11 h-6 rounded-full transition-colors duration-200",
+                    useThemeStore.getState().pinnedMinigames.includes('dial_lock') ? "bg-indigo-500" : "bg-neutral-700"
+                  )}
+                >
+                  <span className={clsx(
+                    "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200",
+                    useThemeStore.getState().pinnedMinigames.includes('dial_lock') && "translate-x-5"
+                  )} />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

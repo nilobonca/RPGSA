@@ -59,14 +59,23 @@ export const useWebRTCGuestSession = ({
     }
   }, [chatSoundEnabledRef]);
 
+  const autoConnectedRef = useRef(false);
+
   const disconnectFromGM = useCallback(() => {
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
     }
+    autoConnectedRef.current = false;
     isReconnectingRef.current = false;
     isJoinedRef.current = false;
     setIsJoined(false);
+
+    if (typeof window !== 'undefined' && projectId) {
+      try {
+        localStorage.removeItem(`rpgsa_guest_session_${projectId}`);
+      } catch (e) {}
+    }
 
     if (currentCallRef.current) {
       try { currentCallRef.current.close(); } catch (e) {}
@@ -83,9 +92,9 @@ export const useWebRTCGuestSession = ({
     setStatus('idle');
     setPing(null);
     setReconnectAttempt(0);
-  }, []);
+  }, [projectId]);
 
-  const connectToGM = useCallback(async (isAutoReconnect = false) => {
+  const connectToGM = useCallback(async (isAutoReconnect = false, overrideListenerId?: string, overrideUsername?: string) => {
     if (!projectId) return;
 
     if (!isAutoReconnect) {
@@ -95,12 +104,29 @@ export const useWebRTCGuestSession = ({
     } else {
       setStatus('reconnecting');
       isReconnectingRef.current = true;
+      setIsJoined(true);
+      isJoinedRef.current = true;
     }
 
     try {
       const Peer = (await import('peerjs')).default;
-      const id = listenerId || `guest-${uuidv4().substring(0, 8)}`;
+      const effectiveUsername = overrideUsername || username || 'Ouvinte';
+      const id = overrideListenerId || listenerId || `guest-${uuidv4().substring(0, 8)}`;
       if (!listenerId) setListenerId(id);
+
+      // Save guest session details in localStorage for page refresh persistence
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(
+            `rpgsa_guest_session_${projectId}`,
+            JSON.stringify({
+              username: effectiveUsername,
+              listenerId: id,
+              isJoined: true
+            })
+          );
+        } catch (e) {}
+      }
 
       if (peerRef.current) {
         try { peerRef.current.destroy(); } catch (e) {}
@@ -113,7 +139,7 @@ export const useWebRTCGuestSession = ({
       peer.on('open', () => {
         const gmPeerId = `visual-sound-design-${projectId}`;
         const conn = peer.connect(gmPeerId, {
-          metadata: { name: username || 'Ouvinte' }
+          metadata: { name: effectiveUsername }
         });
         channelRef.current = conn;
 
@@ -138,7 +164,7 @@ export const useWebRTCGuestSession = ({
           } else if (data.type === 'chat') {
             const msg: ChatMessage = data.payload;
             setChatMessages(prev => [...prev, msg]);
-            if (msg.senderName !== (username || 'Ouvinte')) playPing();
+            if (msg.senderName !== effectiveUsername) playPing();
           } else if (data.type === 'kick_listener') {
             disconnectFromGM();
           } else if (onMinigamePayload) {
@@ -168,8 +194,18 @@ export const useWebRTCGuestSession = ({
         });
       });
 
-      peer.on('error', (err) => {
+      peer.on('error', (err: any) => {
         console.warn("PeerJS error:", err);
+        if (err?.type === 'unavailable-id') {
+          // If PeerServer hasn't unregistered old socket yet on quick refresh, retry after 1.5s
+          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = setTimeout(() => {
+            if (isJoinedRef.current) {
+              connectToGM(true, id, effectiveUsername);
+            }
+          }, 1500);
+          return;
+        }
         handleConnectionLoss();
       });
 
@@ -190,6 +226,55 @@ export const useWebRTCGuestSession = ({
     }
   }, [projectId, username, listenerId, isMuted, guestVolume, audioElRef, playPing, disconnectFromGM, onMinigamePayload]);
 
+  // Auto-restore session from localStorage on mount/refresh
+  useEffect(() => {
+    if (!projectId || typeof window === 'undefined' || autoConnectedRef.current) return;
+    const storageKey = `rpgsa_guest_session_${projectId}`;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data && data.isJoined && data.username && data.listenerId) {
+          autoConnectedRef.current = true;
+          setListenerId(data.listenerId);
+          setIsJoined(true);
+          isJoinedRef.current = true;
+          connectToGM(true, data.listenerId, data.username);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to restore saved guest session:", e);
+    }
+  }, [projectId, connectToGM]);
+
+  const updateUsername = useCallback((newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || !projectId) return;
+
+    if (typeof window !== 'undefined') {
+      try {
+        const storageKey = `rpgsa_guest_session_${projectId}`;
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const data = JSON.parse(saved);
+          localStorage.setItem(storageKey, JSON.stringify({ ...data, username: trimmed }));
+        }
+      } catch (e) {}
+    }
+
+    if (channelRef.current) {
+      if (channelRef.current.metadata) {
+        channelRef.current.metadata.name = trimmed;
+      }
+      if (channelRef.current.open) {
+        channelRef.current.send({
+          type: 'update_guest_name',
+          payload: { name: trimmed }
+        });
+      }
+    }
+  }, [projectId]);
+
   const handleGuestSendMessage = useCallback((text: string, isRoll = false) => {
     if (!channelRef.current || !channelRef.current.open) return;
     const msg: ChatMessage = {
@@ -202,7 +287,7 @@ export const useWebRTCGuestSession = ({
     };
     channelRef.current.send({ type: 'chat', payload: msg });
     setChatMessages(prev => [...prev, msg]);
-  }, [username]);
+  }, [username, listenerId]);
 
   return {
     listenerId,
@@ -219,6 +304,7 @@ export const useWebRTCGuestSession = ({
     channelRef,
     connectToGM,
     disconnectFromGM,
+    updateUsername,
     handleGuestSendMessage,
     handleSendMessage: handleGuestSendMessage,
   };
